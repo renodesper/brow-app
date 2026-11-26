@@ -132,23 +132,29 @@ enum Palette {
 /// the time that matters most to the right.
 private struct CompactIsland: View {
     let model: AppModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let compact = model.compact
         let wing = IslandLayout.wing(glyphs: compact.glyphs)
+        // A glyph grows in from half size and shrinks away, so the wings don't just snap wider.
+        let glyphTransition: AnyTransition = reduceMotion ? .opacity : .scale(scale: 0.5).combined(with: .opacity)
         HStack(spacing: 0) {
             HStack(spacing: 7) {
                 if compact.pomodoro {
                     PomodoroRing(pomodoro: model.pomodoro, lineWidth: 2.5)
                         .frame(width: 16, height: 16)
+                        .transition(glyphTransition)
                 }
                 if let event = compact.event {
                     CalendarGlyph(color: event.color, size: 19)
+                        .transition(glyphTransition)
                 }
                 if compact.keepAwake {
                     Image(systemName: "cup.and.saucer.fill")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Palette.paleBlue)
+                        .transition(glyphTransition)
                 }
             }
             .padding(.leading, 12)
