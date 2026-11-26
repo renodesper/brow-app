@@ -1,11 +1,11 @@
 # Brow: features, progress and what's next
 
-Last updated 26 Nov 2026: v0.2.0 (v0.1.0 plus the design changes listed below), first compiled.
+Last updated 26 Nov 2026: v0.2.0 plus the v2 native macOS look (PRs #19–#25), compiled and tested, not yet tried on a notch.
 
 ## Where the project stands
 
 All four features are written. **It now builds and runs:** on 26 Nov 2026, with Xcode 27.2 (macOS 27 SDK), `swift build`
-and `make run` succeed and all 41 unit tests pass. The only compiler error was a name clash between
+and `make run` succeed and all 68 unit tests pass. The only compiler error was a name clash between
 `BrowCore.Widget` and `SwiftUI.Widget`, fixed by qualifying the name. Idle, the running app used about 0% CPU and
 42 MB (one reading, nothing running). How the island looks was checked on a notch through screenshots; how it
 behaves in real use is mostly unchecked: see the QA checklist in the Obsidian vault.
@@ -18,7 +18,7 @@ Each feature below is marked on four steps:
 | Step | Meaning |
 |---|---|
 | Written | The code exists |
-| Unit tested | Its logic has tests in `Tests/BrowCoreTests` (all 41 pass) |
+| Unit tested | Its logic has tests in `Tests/BrowCoreTests` (all 68 pass) |
 | Builds | It has compiled on a Mac |
 | Checked by hand | Someone has used it on a MacBook with a notch |
 
@@ -35,6 +35,28 @@ Each feature below is marked on four steps:
 
 Size: about 3,440 lines of code in 17 files (2,780 in the app, 660 in `BrowCore`), about 410 lines of tests
 (41 test cases).
+
+## 26 Nov 2026: v2, the native macOS look
+
+Brow now looks like a Mac app and follows light and dark mode (ADR-017 in the Obsidian vault; screens in
+`docs/design/v2/`). Built in six pull requests, in this order. `make test` passes (68 tests) and `make app` builds;
+none of it has been looked at on a notched MacBook yet.
+
+| Step | What changed |
+|---|---|
+| 1. Settings is native (#19) | `NavigationSplitView` sidebar with coloured icon tiles, grouped `Form` per pane, native switches, pop-ups, sliders, steppers and checkboxes. No forced appearance or tint. `SettingsKit.swift` is gone |
+| 2. Settings content (#20) | Hover-to-open is off by default (a saved choice is kept); island size is segmented Match Notch / Custom; no calendar access button once allowed; AI Usage shows a green dot and "Updated hh:mm"; Keep Awake has a "Keep the display on" switch and "Turn off on low battery" with a "Below" pop-up |
+| 3. System font (#25) | Inter, Manrope, `Typeface.swift`, `Support/Fonts`, `ATSApplicationFontsPath` and the Makefile copy step are removed; numbers use `.monospacedDigit()` |
+| 4. Island palette and cards (#25) | System dark colours (orange, green, cyan, purple, red, blue), cards #1C1C1E radius 16, sentence-case coloured titles, 32 pt round tinted buttons, 28 pt capsules, title-case peek buttons. The island stays black |
+| 5. Right-click menu (#25) | The Keep Awake submenu lists all nine lengths and Indefinitely |
+| 6. Header (#25) | The open island shows the date only; the battery label and the read on every open are removed. Keep Awake's battery cut-off is unchanged |
+
+Not done from the v2 spec: −0.5 tracking on the big card numbers, and the calendar glyph beside the notch is still a
+coloured tile rather than a bare glyph. To check on a Mac, in both light and dark: every Settings pane, the
+Screens thumbnails, the calendar checkboxes and the island cards and peeks.
+
+Everything below describes v0.2.0 as it was built; where it mentions Inter and Manrope, `SettingsKit.swift`, the
+amber / pale blue / teal palette, the battery in the header or the four-length menu, v2 has replaced it.
 
 ## 26 Nov 2026: the design, implemented
 
