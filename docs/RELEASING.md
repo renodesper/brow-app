@@ -114,7 +114,7 @@ Brow is an app, so it goes in as a **cask** (a formula is for command-line tools
 
 1. **A notarized build.** Homebrew refuses casks for apps that fail Gatekeeper, so the plain image is not enough: it comes after "When there is an Apple Developer account".
 2. **A public repository with a licence.** The cask downloads the image from a GitHub release by URL, which a private
-   repo cannot serve (`renodesper/brow` is private and has no licence at the time of writing). The licence also tells
+   repo cannot serve. Brow is MIT licensed (see `LICENSE`). The licence also tells
    people, and Homebrew, on what terms they may use the app.
 3. **A GitHub release** named `v<version>` (for example `v0.2.0`) with `Brow-<version>.dmg` attached (the workflow does this). The
    release tag, the `version` in `Support/Info.plist` and the image's name must agree, since the cask builds the URL
