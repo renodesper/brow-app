@@ -26,7 +26,7 @@ private struct Card<Accessory: View, Content: View>: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(tint)
                 Text(title.uppercased())
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(Typeface.text(10, weight: .semibold))
                     .tracking(0.6)
                     .foregroundStyle(Palette.secondary)
                 Spacer(minLength: 4)
@@ -60,9 +60,11 @@ struct PillButtonStyle: ButtonStyle {
         let fill: Color = isPrimary ? .white : isSelected ? Palette.paleBlue : Palette.track
         let text: Color = isPrimary ? .black : isSelected ? Palette.navy : .white
         configuration.label
-            .font(.system(size: 12, weight: isSelected ? .bold : .semibold))
+            .font(Typeface.text(12, weight: isSelected ? .bold : .semibold))
             .foregroundStyle(text)
-            .padding(.horizontal, 13)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .padding(.horizontal, fillsWidth ? 4 : 13)
             .frame(maxWidth: fillsWidth ? .infinity : nil)
             .frame(height: 30)
             .background(fill.opacity(configuration.isPressed ? 0.7 : 1), in: Capsule())
@@ -89,7 +91,7 @@ private struct Chip: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 10, weight: .semibold, design: .rounded))
+            .font(Typeface.number(10, weight: .semibold))
             .foregroundStyle(tint)
             .padding(.horizontal, 8)
             .frame(height: 19)
@@ -126,10 +128,10 @@ struct PomodoroCard: View {
         } content: {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Countdown(pomodoro: pomodoro)
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .font(Typeface.number(34, weight: .bold))
                     .monospacedDigit()
                 Text("of \(Pomodoro.clockText(timer.settings.length(of: timer.phase)))")
-                    .font(.system(size: 11))
+                    .font(Typeface.text(11))
                     .foregroundStyle(Palette.secondary)
             }
             PomodoroProgress(pomodoro: pomodoro)
@@ -172,7 +174,7 @@ struct KeepAwakeCard: View {
             if keepAwake.isOn {
                 Button("Turn off") { keepAwake.stop() }
                     .buttonStyle(.plain)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(Typeface.text(12, weight: .semibold))
                     .foregroundStyle(Palette.paleBlue)
             }
         } content: {
@@ -184,10 +186,10 @@ struct KeepAwakeCard: View {
                         Text("Off")
                     }
                 }
-                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .font(Typeface.number(34, weight: .bold))
                 .monospacedDigit()
                 Text(detail)
-                    .font(.system(size: 11))
+                    .font(Typeface.text(11))
                     .foregroundStyle(Palette.secondary)
                     .lineLimit(1)
             }
@@ -223,13 +225,13 @@ struct UsageCard: View {
         Card("AI Usage", symbol: "gauge.with.dots.needle.33percent", tint: .white) {
             if let lastRead = usage.lastRead {
                 Text("read \(lastRead.formatted(date: .omitted, time: .shortened))")
-                    .font(.system(size: 10))
+                    .font(Typeface.text(10))
                     .foregroundStyle(Palette.secondary)
             }
         } content: {
             if usage.readings.isEmpty {
                 Text("No limits yet. Connect Claude Code or run Codex: right-click the island and open Settings → AI Usage.")
-                    .font(.system(size: 11))
+                    .font(Typeface.text(11))
                     .foregroundStyle(Palette.secondary)
             } else {
                 let now = Date()
@@ -252,17 +254,17 @@ struct UsageCard: View {
         let percent: String = "\(Int((used * 100).rounded()))%"
         return VStack(spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(name).font(.system(size: 12, weight: .semibold))
+                Text(name).font(Typeface.text(12, weight: .semibold))
                 Text("· " + Self.windowName(window.label))
-                    .font(.system(size: 12))
+                    .font(Typeface.text(12))
                     .foregroundStyle(Palette.secondary)
                 Spacer(minLength: 4)
                 Text(percent)
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(Typeface.number(12, weight: .bold))
                     .foregroundStyle(isHigh ? Palette.amber : .white)
                 if usage.showsResetTimes, let reset = resetText(window, at: now) {
                     Text("· resets " + reset)
-                        .font(.system(size: 10))
+                        .font(Typeface.text(10))
                         .foregroundStyle(Palette.secondary)
                 }
             }
@@ -298,7 +300,7 @@ struct CalendarCard: View {
         Card("Calendar", symbol: "calendar", tint: Palette.teal) {
             if calendar.access == .granted, !calendar.events.isEmpty {
                 Text("Next \(min(calendar.events.count, 3))")
-                    .font(.system(size: 10))
+                    .font(Typeface.text(10))
                     .foregroundStyle(Palette.secondary)
             }
         } content: {
@@ -322,20 +324,20 @@ struct CalendarWideCard: View {
         HStack(spacing: IslandLayout.spacing) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("TODAY")
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(Typeface.text(10, weight: .semibold))
                     .tracking(0.6)
                     .foregroundStyle(Palette.secondary)
                 Text(now, format: .dateTime.day())
-                    .font(.system(size: 56, weight: .bold, design: .rounded))
+                    .font(Typeface.number(56, weight: .bold))
                 Text(now, format: .dateTime.weekday(.wide))
-                    .font(.system(size: 15, weight: .bold))
+                    .font(Typeface.text(15, weight: .bold))
                 Text(now, format: .dateTime.month(.wide).year())
-                    .font(.system(size: 11))
+                    .font(Typeface.text(11))
                     .foregroundStyle(Palette.secondary)
                 Spacer(minLength: 0)
                 if calendar.access == .granted {
                     Text(calendar.today.isEmpty ? "Nothing else today" : "\(calendar.today.count) more today")
-                        .font(.system(size: 10))
+                        .font(Typeface.text(10))
                         .foregroundStyle(Palette.secondary)
                 }
             }
@@ -347,14 +349,14 @@ struct CalendarWideCard: View {
 
             Card("Calendar", symbol: "calendar", tint: Palette.teal) {
                 Text("Rest of today")
-                    .font(.system(size: 10))
+                    .font(Typeface.text(10))
                     .foregroundStyle(Palette.secondary)
             } content: {
                 CalendarAccessGate(calendar: calendar, empty: "Nothing else today.") {
                     let today = calendar.today
                     if today.isEmpty {
                         Text("Nothing else today.")
-                            .font(.system(size: 11))
+                            .font(Typeface.text(11))
                             .foregroundStyle(Palette.secondary)
                     } else {
                         VStack(spacing: 6) {
@@ -394,7 +396,7 @@ private struct CalendarAccessGate<Content: View>: View {
 
     private func note(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 11))
+            .font(Typeface.text(11))
             .foregroundStyle(Palette.secondary)
     }
 }
@@ -411,28 +413,28 @@ private struct EventRow: View {
         HStack(spacing: 10) {
             if showsTime {
                 Text(event.isAllDay ? "All day" : event.start.formatted(date: .omitted, time: .shortened))
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(Typeface.number(11, weight: .bold))
                     .foregroundStyle(Palette.secondary)
                     .frame(width: 44, alignment: .leading)
             }
             Capsule().fill(event.color).frame(width: 3, height: 28)
             VStack(alignment: .leading, spacing: 1) {
-                Text(event.title).font(.system(size: 12, weight: .semibold))
+                Text(event.title).font(Typeface.text(12, weight: .semibold))
                 Text(subtitle(at: now))
-                    .font(.system(size: 10))
+                    .font(Typeface.text(10))
                     .foregroundStyle(Palette.secondary)
             }
             .lineLimit(1)
             Spacer(minLength: 4)
             if isNext, !event.isAllDay, event.start.timeIntervalSince(now) < 60 * 60 {
                 EventCountdown(event: event)
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(Typeface.number(11, weight: .bold))
                     .padding(.horizontal, 8)
                     .frame(height: 19)
                     .background(Palette.teal.opacity(0.16), in: Capsule())
             } else if !showsTime {
                 Text(when(at: now))
-                    .font(.system(size: 11))
+                    .font(Typeface.text(11))
                     .foregroundStyle(Palette.secondary)
             }
         }

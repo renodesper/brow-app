@@ -129,6 +129,7 @@ final class IslandController {
             // Read as it opens, so what it shows is current without anything polling in between.
             model.usage.refresh()
             model.calendar.refresh()
+            model.island.battery = PowerSource.battery()
         }
         model.island.isOpen = open
     }

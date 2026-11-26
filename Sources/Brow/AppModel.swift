@@ -48,7 +48,7 @@ final class AppModel {
     /// The island's size right now, shoulders included. The window and the drawing both take it from here.
     var islandSize: CGSize {
         IslandLayout.size(mode: mode, notch: island.notch, glyphs: compact.glyphs,
-                          layout: currentScreen.layout, hasDots: preferences.screens.count > 1)
+                          layout: currentScreen.layout, hasDots: preferences.screens.count > 1, peek: island.peek)
     }
 }
 
@@ -84,12 +84,20 @@ final class IslandState {
     /// The notch's size, or a notch-sized area on a screen without one.
     var notch = CGSize(width: 180, height: 32)
     var hasPhysicalNotch = true
+    /// The battery as it was when the island last opened, for the header. Nil on a Mac without one.
+    var battery: PowerSource.Battery?
 }
 
 /// The island's sizes, in points. The design was drawn at 1.25×, so its pixels are divided by 1.25 here.
 enum IslandLayout {
     static let openWidth: CGFloat = 624
-    static let peekWidth: CGFloat = 480
+    /// The canvas draws the event peek 560 px wide and the "Focus done" peek 640 px; points are pixels / 1.25.
+    static func peekWidth(for peek: Peek?) -> CGFloat {
+        switch peek {
+        case .phaseFinished: 512
+        case .eventStarted, nil: 448
+        }
+    }
     static let peekContentHeight: CGFloat = 64
     static let spacing: CGFloat = 10
     static let padding: CGFloat = 14
@@ -136,13 +144,14 @@ enum IslandLayout {
         }
     }
 
-    static func size(mode: IslandMode, notch: CGSize, glyphs: Int, layout: ScreenLayout, hasDots: Bool) -> CGSize {
+    static func size(mode: IslandMode, notch: CGSize, glyphs: Int, layout: ScreenLayout, hasDots: Bool,
+                     peek: Peek? = nil) -> CGSize {
         let body: CGSize
         switch mode {
         case .closed:
             body = CGSize(width: notch.width + (glyphs > 0 ? 2 * wing(glyphs: glyphs) : 0), height: notch.height)
         case .peek:
-            body = CGSize(width: max(peekWidth, notch.width + 2 * wing(glyphs: 1)),
+            body = CGSize(width: max(peekWidth(for: peek), notch.width + 2 * wing(glyphs: 1)),
                           height: notch.height + peekContentHeight + padding)
         case .open:
             let rows = CGFloat(layout.rows)

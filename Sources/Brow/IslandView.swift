@@ -145,7 +145,7 @@ private struct CompactIsland: View {
             .padding(.trailing, 12)
             .frame(width: wing, alignment: .trailing)
         }
-        .font(.system(size: 13, weight: .bold, design: .rounded))
+        .font(Typeface.number(13, weight: .bold))
         .monospacedDigit()
         .lineLimit(1)
         .frame(height: model.island.notch.height)
@@ -166,11 +166,12 @@ private struct OpenIsland: View {
             HStack(spacing: 0) {
                 Text(Date.now, format: .dateTime.weekday(.wide).day().month(.wide))
                 Spacer(minLength: island.notch.width + 16)
-                if screens.count > 1 {
-                    Text(screen.title)
+                if let battery = island.battery {
+                    Label("\(battery.percent)%", systemImage: Self.batterySymbol(for: battery.percent))
+                        .labelStyle(.titleAndIcon)
                 }
             }
-            .font(.system(size: 12, weight: .semibold))
+            .font(Typeface.text(12, weight: .semibold))
             .foregroundStyle(Palette.secondary)
             .lineLimit(1)
             .padding(.horizontal, 12)
@@ -202,6 +203,16 @@ private struct OpenIsland: View {
         }
         .foregroundStyle(.white)
         .animation(IslandLayout.animation, value: island.screenIndex)
+    }
+
+    private static func batterySymbol(for percent: Int) -> String {
+        switch percent {
+        case 88...: "battery.100percent"
+        case 63...: "battery.75percent"
+        case 38...: "battery.50percent"
+        case 13...: "battery.25percent"
+        default: "battery.0percent"
+        }
     }
 }
 
@@ -268,7 +279,7 @@ private struct PeekView: View {
                         Circle().fill(Palette.teal).frame(width: 8, height: 8)
                         Text("Now")
                     }
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .font(Typeface.number(18, weight: .bold))
                 case .phaseFinished(let phase):
                     phaseFinished(phase)
                 }
@@ -331,8 +342,8 @@ private struct PeekView: View {
 
     private func titles(_ title: String, _ subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(title).font(.system(size: 16, weight: .bold))
-            Text(subtitle).font(.system(size: 12)).foregroundStyle(Palette.secondary)
+            Text(title).font(Typeface.text(16, weight: .bold))
+            Text(subtitle).font(Typeface.text(12)).foregroundStyle(Palette.secondary)
         }
         .lineLimit(1)
     }

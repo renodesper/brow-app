@@ -15,6 +15,8 @@ app: build
 	mkdir -p $(APP)/Contents/MacOS
 	cp $(BINARY) $(APP)/Contents/MacOS/Brow
 	cp Support/Info.plist $(APP)/Contents/Info.plist
+	mkdir -p $(APP)/Contents/Resources/Fonts
+	cp Support/Fonts/* $(APP)/Contents/Resources/Fonts/
 	codesign --force --sign "$(SIGN_ID)" $(APP)
 
 run: app
