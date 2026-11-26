@@ -223,7 +223,7 @@ struct KeepAwakeCard: View {
             }
             Spacer(minLength: 0)
             HStack(spacing: 6) {
-                ForEach(keepAwake.islandPresets) { preset in
+                ForEach(KeepAwake.presets) { preset in
                     let isCurrent = keepAwake.isOn && keepAwake.presetID == preset.id
                     Button(preset.label) { keepAwake.start(preset) }
                         .buttonStyle(PillButtonStyle(isTinted: isCurrent, fillsWidth: true))

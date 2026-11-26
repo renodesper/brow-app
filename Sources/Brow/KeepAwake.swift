@@ -17,26 +17,24 @@ final class KeepAwake {
         let label: String
         /// For menus and settings.
         let title: String
-        /// Spelled out, for the Settings buttons.
-        let settingsLabel: String
         /// nil is until it is turned off.
         let duration: TimeInterval?
     }
 
-    /// Every length the default can be, shortest first.
+    /// Every length Keep Awake can be turned on for, shortest first. The right-click menu lists all of them.
     static let choices = [
-        Preset(id: "5m", label: "5m", title: "5 Minutes", settingsLabel: "5 min", duration: 5 * 60),
-        Preset(id: "10m", label: "10m", title: "10 Minutes", settingsLabel: "10 min", duration: 10 * 60),
-        Preset(id: "15m", label: "15m", title: "15 Minutes", settingsLabel: "15 min", duration: 15 * 60),
-        Preset(id: "30m", label: "30m", title: "30 Minutes", settingsLabel: "30 min", duration: 30 * 60),
-        Preset(id: "1h", label: "1h", title: "1 Hour", settingsLabel: "1 hour", duration: 60 * 60),
-        Preset(id: "2h", label: "2h", title: "2 Hours", settingsLabel: "2 hours", duration: 2 * 60 * 60),
-        Preset(id: "3h", label: "3h", title: "3 Hours", settingsLabel: "3 hours", duration: 3 * 60 * 60),
-        Preset(id: "5h", label: "5h", title: "5 Hours", settingsLabel: "5 hours", duration: 5 * 60 * 60),
-        Preset(id: "none", label: "No end", title: "Indefinitely", settingsLabel: "Indefinitely", duration: nil),
+        Preset(id: "5m", label: "5m", title: "5 Minutes", duration: 5 * 60),
+        Preset(id: "10m", label: "10m", title: "10 Minutes", duration: 10 * 60),
+        Preset(id: "15m", label: "15m", title: "15 Minutes", duration: 15 * 60),
+        Preset(id: "30m", label: "30m", title: "30 Minutes", duration: 30 * 60),
+        Preset(id: "1h", label: "1h", title: "1 Hour", duration: 60 * 60),
+        Preset(id: "2h", label: "2h", title: "2 Hours", duration: 2 * 60 * 60),
+        Preset(id: "3h", label: "3h", title: "3 Hours", duration: 3 * 60 * 60),
+        Preset(id: "5h", label: "5h", title: "5 Hours", duration: 5 * 60 * 60),
+        Preset(id: "none", label: "No end", title: "Indefinitely", duration: nil),
     ]
 
-    /// The four the island's card and menu always offer.
+    /// The four the island's card offers.
     static let presets = choices.filter { ["30m", "1h", "2h", "none"].contains($0.id) }
 
     static let batteryLevels = [10, 20, 30]
@@ -46,11 +44,6 @@ final class KeepAwake {
     private(set) var until: Date?
     /// The preset it was turned on with.
     private(set) var presetID: String?
-
-    /// The preset the island suggests first.
-    var defaultPresetID: String {
-        didSet { defaults.set(defaultPresetID, forKey: Key.defaultPreset) }
-    }
 
     /// Whether the display stays on too, or only the Mac.
     var keepsDisplayOn: Bool {
@@ -79,16 +72,6 @@ final class KeepAwake {
         didSet { defaults.set(showsBesideNotch, forKey: Key.showsBesideNotch) }
     }
 
-    /// What the island's card and menu offer: the four usual lengths, and the default too when it is another one,
-    /// so the default is always there to pick.
-    var islandPresets: [Preset] {
-        Self.choices.filter { preset in Self.presets.contains { $0.id == preset.id } || preset.id == defaultPresetID }
-    }
-
-    var defaultPreset: Preset {
-        Self.presets.first { $0.id == defaultPresetID } ?? Self.presets[1]
-    }
-
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var assertion: NSObjectProtocol?
     @ObservationIgnored private var expiry: Task<Void, Never>?
@@ -97,7 +80,6 @@ final class KeepAwake {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        defaultPresetID = defaults.string(forKey: Key.defaultPreset) ?? "1h"
         keepsDisplayOn = defaults.bool(Key.keepsDisplayOn, default: true)
         batteryCutoffEnabled = defaults.bool(Key.batteryCutoffEnabled, default: true)
         batteryCutoffLevel = defaults.int(Key.batteryCutoffLevel, default: 20)
@@ -187,7 +169,6 @@ final class KeepAwake {
     }
 
     private enum Key {
-        static let defaultPreset = "keepAwake.defaultPreset"
         static let keepsDisplayOn = "keepAwake.keepsDisplayOn"
         static let batteryCutoffEnabled = "keepAwake.batteryCutoffEnabled"
         static let batteryCutoffLevel = "keepAwake.batteryCutoffLevel"
