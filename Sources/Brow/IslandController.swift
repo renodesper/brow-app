@@ -21,6 +21,7 @@ final class IslandController {
     /// Builds the right-click menu as it opens, so it always matches what is going on.
     private let makeMenu: () -> NSMenu
     private var pendingOpen: Task<Void, Never>?
+    private var pendingClose: Task<Void, Never>?
     private var pendingShrink: Task<Void, Never>?
     private var pendingPeekEnd: Task<Void, Never>?
     private var screenObserver: NSObjectProtocol?
@@ -96,6 +97,7 @@ final class IslandController {
 
     private func pointerMoved(inside: Bool) {
         if inside {
+            pendingClose?.cancel()
             if model.island.peek != nil {
                 // The pointer holds a peek open, so its buttons can be reached.
                 pendingPeekEnd?.cancel()
@@ -114,7 +116,15 @@ final class IslandController {
             // that never happened.
             pendingOpen?.cancel()
             if model.island.peek != nil { endPeek(after: .seconds(1)) }
-            setOpen(false)
+            guard model.island.isOpen else { return }
+            // A short grace, so brushing past the edge doesn't shut the island. Coming back cancels it, and the
+            // pointer is checked again when it ends in case no "entered" event arrived.
+            pendingClose?.cancel()
+            pendingClose = Task { [weak self] in
+                try? await Task.sleep(for: IslandLayout.closeGrace)
+                guard !Task.isCancelled, let self, !self.isPointerInside else { return }
+                self.setOpen(false)
+            }
         }
     }
 
