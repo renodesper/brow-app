@@ -83,7 +83,13 @@ A custom island size: General has "Match the notch" (the default) and "Custom si
 the notch's own size up by 135 pt and 12 pt (never smaller than the notch). Widths are kept even so the island stays
 centred. Reset to notch size puts both back.
 
-Not built from the design, because it needs the account of each calendar: calendars grouped by account.
+Settings > Calendar groups the calendars by account, as the design draws it: each account has an icon, its name, how
+many of its calendars are shown, and a fold toggle, and the header says "N of M calendars shown, from K accounts".
+Subscribed and birthday calendars start folded. Accounts come from EventKit's `source`, which gives a name and a
+type, not an email address, so an account shows its name and kind. Not seen with real calendars: Calendar access has not
+been granted to the app on the Mac this was built on, so the grouping was checked with made-up data.
+
+Every control the design draws is now built.
 
 Seen on a notched MacBook through screenshots on 26 Nov 2026: the open island with the new fonts and header, and the
 General, Screens, Calendar, Pomodoro, Keep Awake and AI Usage panes. Still unchecked: real clicks in Settings, drag
