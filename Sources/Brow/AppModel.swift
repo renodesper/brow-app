@@ -114,7 +114,8 @@ enum IslandLayout {
     static let peekContentHeight: CGFloat = 64
     static let spacing: CGFloat = 10
     static let padding: CGFloat = 14
-    static let dotsHeight: CGFloat = 22
+    /// The page dots' row, from the cards to the island's bottom edge: the dots sit in the middle of it.
+    static let dotsHeight: CGFloat = 28
 
     /// How long the pointer may be outside the island before it closes. Coming back within it keeps it open.
     static let closeGrace: Duration = .milliseconds(280)
@@ -185,7 +186,7 @@ enum IslandLayout {
             let rows = CGFloat(layout.rows)
             let cards = rows * rowHeight(for: layout) + (rows - 1) * spacing
             body = CGSize(width: max(openWidth, notch.width + 2 * wing(glyphs: 3)),
-                          height: notch.height + spacing + cards + (hasDots ? dotsHeight : 4) + padding)
+                          height: notch.height + spacing + cards + (hasDots ? dotsHeight : 4 + padding))
         }
         return CGSize(width: body.width + 2 * shoulder(for: mode), height: body.height)
     }
