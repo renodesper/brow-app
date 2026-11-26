@@ -208,10 +208,6 @@ private struct OpenIsland: View {
             HStack(spacing: 0) {
                 Text(Date.now, format: .dateTime.weekday(.wide).day().month(.wide))
                 Spacer(minLength: island.notch.width + 16)
-                if let battery = island.battery {
-                    Label("\(battery.percent)%", systemImage: Self.batterySymbol(for: battery.percent))
-                        .labelStyle(.titleAndIcon)
-                }
             }
             .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(Palette.secondary)
@@ -250,16 +246,6 @@ private struct OpenIsland: View {
         }
         .foregroundStyle(.white)
         .animation(IslandLayout.animation(reduceMotion: reduceMotion), value: island.screenIndex)
-    }
-
-    private static func batterySymbol(for percent: Int) -> String {
-        switch percent {
-        case 88...: "battery.100percent"
-        case 63...: "battery.75percent"
-        case 38...: "battery.50percent"
-        case 13...: "battery.25percent"
-        default: "battery.0percent"
-        }
     }
 }
 
