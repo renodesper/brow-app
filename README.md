@@ -72,6 +72,8 @@ Sources/Brow/              The app
   Cards.swift              The four cards, and the calendar's wide card for a screen of its own
   IslandMenu.swift         The right-click menu
   SettingsWindow.swift     The Settings window and its six panes
+  SettingsKit.swift        The Settings window's controls: sidebar, checkbox, select, pills, tiles
+  Typeface.swift           Inter and Manrope, bundled from Support/Fonts (SIL OFL licences beside them)
   AppModel.swift           The models in one place, and the island's sizes
   Preferences.swift        How the island opens, the master switch for beside the notch, the screens
   KeepAwake.swift, PomodoroModel.swift, UsageModel.swift, CalendarModel.swift
