@@ -1,0 +1,33 @@
+name: Build and test
+
+# The code was once written without a compiler and merged without ever being built. This runs the same two commands
+# as the Makefile on every pull request and every push to main, so a broken build cannot reach main unseen.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A newer push to the same branch makes an older run pointless.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    # The newest macOS image. The package supports macOS 14 and later, but SwiftUI's @State is a macro whose plugin
+    # ships with Xcode, so the full Xcode on the runner is needed, not only the Command Line Tools.
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Test
+        run: swift test
+      - name: Build the release binary
+        run: swift build -c release
