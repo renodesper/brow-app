@@ -220,15 +220,14 @@ private struct OpenIsland: View {
                 .transition(reduceMotion ? .opacity : .push(from: island.movedForward ? .trailing : .leading))
                 .padding(.top, IslandLayout.spacing)
                 .padding(.horizontal, 12)
-                // Drawn as one flat image so a screen dragged partly out of view keeps its card backgrounds.
-                .drawingGroup()
                 // Follows the fingers with no animation of its own; when they lift it springs back or carries on
                 // with the change of screen.
                 .offset(x: island.dragOffset)
                 .animation(island.isDragging ? nil : IslandLayout.animation(reduceMotion: reduceMotion),
                            value: island.dragOffset)
+                // No clip of its own: the island's shape clips it, and a rectangular clip here made a card dragged
+                // partly out of view lose its background or its bottom.
                 .frame(maxWidth: .infinity)
-                .clipped()
 
             if screens.count > 1 {
                 HStack(spacing: 0) {
