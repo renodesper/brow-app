@@ -4,10 +4,10 @@ cask "brow" do
   version "1.0.0"
   sha256 "REPLACE_WITH_THE_SHA256_OF_THE_DMG"
 
-  url "https://github.com/renodesper/brow/releases/download/v#{version}/Brow-#{version}.dmg"
+  url "https://github.com/renodesper/brow-app/releases/download/v#{version}/Brow-#{version}.dmg"
   name "Brow"
   desc "Pomodoro, Keep Awake, AI usage and calendar in the MacBook notch"
-  homepage "https://github.com/renodesper/brow"
+  homepage "https://github.com/renodesper/brow-app"
 
   livecheck do
     url :url
