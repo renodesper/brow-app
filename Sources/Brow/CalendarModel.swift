@@ -30,6 +30,61 @@ final class CalendarModel {
         let id: String
         let title: String
         let color: Color
+        let accountID: String
+        let accountTitle: String
+        let accountKind: AccountKind
+    }
+
+    /// The kind of account a calendar lives in, for its icon and label. In the order they are listed.
+    enum AccountKind: Int, Comparable {
+        case iCloud, calDAV, exchange, local, subscribed, birthdays
+
+        static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
+
+        init(_ source: EKSource) {
+            switch source.sourceType {
+            case .mobileMe: self = .iCloud
+            case .calDAV: self = source.title.localizedCaseInsensitiveContains("icloud") ? .iCloud : .calDAV
+            case .exchange: self = .exchange
+            case .local: self = .local
+            case .subscribed: self = .subscribed
+            case .birthdays: self = .birthdays
+            @unknown default: self = .calDAV
+            }
+        }
+
+        var label: String {
+            switch self {
+            case .iCloud: "iCloud"
+            case .calDAV: "Calendar account"
+            case .exchange: "Exchange"
+            case .local: "On this Mac"
+            case .subscribed: "Subscribed"
+            case .birthdays: "Birthdays"
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .iCloud: "icloud"
+            case .calDAV: "person.crop.circle"
+            case .exchange: "envelope"
+            case .local: "laptopcomputer"
+            case .subscribed: "dot.radiowaves.up.forward"
+            case .birthdays: "gift"
+            }
+        }
+
+        /// Whether the list starts folded: these hold little the owner picks by hand.
+        var startsFolded: Bool { self == .subscribed || self == .birthdays }
+    }
+
+    /// An account and its calendars, for the settings.
+    struct Account: Identifiable {
+        let id: String
+        let title: String
+        let kind: AccountKind
+        let calendars: [CalendarInfo]
     }
 
     enum Access {
@@ -142,8 +197,23 @@ final class CalendarModel {
     func loadCalendars() {
         guard access == .granted else { return }
         calendars = store.calendars(for: .event)
-            .map { CalendarInfo(id: $0.calendarIdentifier, title: $0.title, color: Color(nsColor: $0.color)) }
+            .map {
+                CalendarInfo(id: $0.calendarIdentifier, title: $0.title, color: Color(nsColor: $0.color),
+                             accountID: $0.source.sourceIdentifier, accountTitle: $0.source.title,
+                             accountKind: AccountKind($0.source))
+            }
             .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+    }
+
+    /// The calendars grouped by the account they belong to: iCloud first, then other accounts, this Mac, and the
+    /// subscribed and birthday calendars last.
+    var accounts: [Account] {
+        Dictionary(grouping: calendars, by: \.accountID)
+            .compactMap { id, calendars -> Account? in
+                guard let first = calendars.first else { return nil }
+                return Account(id: id, title: first.accountTitle, kind: first.accountKind, calendars: calendars)
+            }
+            .sorted { ($0.kind, $0.title) < ($1.kind, $1.title) }
     }
 
     /// Reads the events from now until the end of tomorrow, the one going on now included.

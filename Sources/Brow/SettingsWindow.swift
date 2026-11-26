@@ -538,32 +538,15 @@ private struct CalendarPane: View {
             SettingsDivider()
             SettingsSection(title: "Calendars",
                             detail: "Pick the calendars the island uses. Events from unchecked ones don’t appear in the island or beside the notch.",
-                            trailing: calendar.calendars.isEmpty ? nil : "\(shown) of \(calendar.calendars.count) calendars shown") {
+                            trailing: calendar.calendars.isEmpty ? nil : summary(shown: shown)) {
                 if calendar.calendars.isEmpty {
                     Text(calendar.access == .granted ? "No calendars on this Mac." : "Allow access to choose calendars.")
                         .font(SettingsStyle.body)
                         .foregroundStyle(SettingsStyle.hint)
                 } else {
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 20), GridItem(.flexible())], alignment: .leading, spacing: 9) {
-                        ForEach(calendar.calendars) { info in
-                            Toggle(isOn: Binding(
-                                get: { !calendar.excludedCalendarIDs.contains(info.id) },
-                                set: { include in
-                                    if include {
-                                        calendar.excludedCalendarIDs.remove(info.id)
-                                    } else {
-                                        calendar.excludedCalendarIDs.insert(info.id)
-                                    }
-                                })) {
-                                HStack(spacing: 8) {
-                                    Circle().fill(info.color).frame(width: 8, height: 8)
-                                    Text(info.title).font(SettingsStyle.body)
-                                }
-                            }
-                            .toggleStyle(CheckboxStyle())
-                        }
+                    ForEach(calendar.accounts) { account in
+                        AccountTile(account: account, calendar: calendar)
                     }
-                    .settingsTile(vertical: 14, horizontal: 16)
                 }
                 CheckRow(title: "Include all-day events", isOn: $calendar.includesAllDay)
             }
@@ -583,6 +566,84 @@ private struct CalendarPane: View {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
             NSWorkspace.shared.open(url)
         }
+    }
+}
+
+/// How many calendars are shown, and from how many accounts.
+private extension CalendarPane {
+    func summary(shown: Int) -> String {
+        let accounts = calendar.accounts.count
+        return "\(shown) of \(calendar.calendars.count) calendars shown, from \(accounts) account\(accounts == 1 ? "" : "s")"
+    }
+}
+
+/// One account and its calendars to tick, which can be folded away. Subscribed and birthday calendars start folded.
+private struct AccountTile: View {
+    let account: CalendarModel.Account
+    @Bindable var calendar: CalendarModel
+    @State private var isExpanded: Bool
+
+    init(account: CalendarModel.Account, calendar: CalendarModel) {
+        self.account = account
+        self.calendar = calendar
+        _isExpanded = State(initialValue: !account.kind.startsFolded)
+    }
+
+    var body: some View {
+        let shown = account.calendars.filter { !calendar.excludedCalendarIDs.contains($0.id) }.count
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 11) {
+                Image(systemName: account.kind.symbol)
+                    .font(.system(size: 14))
+                    .foregroundStyle(SettingsStyle.muted)
+                    .frame(width: 18)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(account.title).font(Typeface.text(12, weight: .semibold))
+                    // An account named after its kind, like iCloud, would just say it twice.
+                    if account.title != account.kind.label {
+                        Text(account.kind.label).font(SettingsStyle.caption).foregroundStyle(SettingsStyle.hint)
+                    }
+                }
+                Spacer()
+                Text(shown == 0 ? "None of \(account.calendars.count) shown" : "\(shown) of \(account.calendars.count) shown")
+                    .font(Typeface.text(10.5, weight: shown == 0 ? .regular : .semibold))
+                    .foregroundStyle(shown == 0 ? SettingsStyle.hint : Palette.navy)
+                Button { isExpanded.toggle() } label: {
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(SettingsStyle.muted)
+                        .frame(width: 26, height: 26)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isExpanded ? "Fold \(account.title)" : "Unfold \(account.title)")
+                .accessibilityAddTraits(.isButton)
+            }
+            if isExpanded {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 20), GridItem(.flexible())], alignment: .leading, spacing: 9) {
+                    ForEach(account.calendars) { info in
+                        Toggle(isOn: Binding(
+                            get: { !calendar.excludedCalendarIDs.contains(info.id) },
+                            set: { include in
+                                if include {
+                                    calendar.excludedCalendarIDs.remove(info.id)
+                                } else {
+                                    calendar.excludedCalendarIDs.insert(info.id)
+                                }
+                            })) {
+                            HStack(spacing: 8) {
+                                Circle().fill(info.color).frame(width: 8, height: 8)
+                                Text(info.title).font(SettingsStyle.body)
+                            }
+                        }
+                        .toggleStyle(CheckboxStyle())
+                    }
+                }
+                .padding(.leading, 29)
+                .padding(.bottom, 4)
+            }
+        }
+        .settingsTile(vertical: 8, horizontal: 14)
     }
 }
 
