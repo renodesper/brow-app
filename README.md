@@ -13,6 +13,21 @@ one screen of cards; swipe left or right with two fingers to see the others. Fou
   the notch from 15 minutes before it starts ("in 12m", then "Now"), and the island opens for a moment as it starts.
   A Join button appears on events with a Zoom, Google Meet, Microsoft Teams or Webex link.
 
+<p align="center">
+  <img src="docs/images/island-all-four.png" width="640" alt="The open island showing Pomodoro, Keep Awake, AI Usage and Calendar cards on one screen">
+</p>
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/island-closed.png" width="340" alt="The closed island beside the notch, with a Pomodoro ring, the Keep Awake cup and the time left"><br><sub>Beside the notch while something runs</sub></td>
+    <td align="center"><img src="docs/images/peek-focus-done.png" width="340" alt="A short banner saying Focus done with a Skip Break button"><br><sub>A peek when a phase ends</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/island-usage-keepawake.png" width="340" alt="A screen with AI Usage and Keep Awake cards"><br><sub>Swipe to another screen</sub></td>
+    <td align="center"><img src="docs/images/island-calendar.png" width="340" alt="A screen with today's date and the rest of today's events"><br><sub>Today's calendar</sub></td>
+  </tr>
+</table>
+
 **Right-click the island** for Keep Awake, Pomodoro, Settings and Quit. There is no Dock icon and no menu bar icon.
 Opening the app again from Finder also shows Settings, and so does **⌃⌥⌘,** (Control-Option-Command-Comma) from any app,
 which needs no permission. If another app already holds that combination, Brow has no shortcut and the Settings text
@@ -56,6 +71,25 @@ Download `Brow-<version>.dmg` from the releases page, open it and drag Brow onto
 notarized, macOS warns that the developer cannot be verified: open Brow once, then System Settings → Privacy &
 Security → "Open Anyway". Calendar access is asked again after each update for the same reason. If you turned on AI
 Usage for Claude Code, turn it off in Settings before deleting the app, so your status line is put back.
+
+## Settings
+
+Settings follows light and dark mode (these are dark). Nothing here needs a login or the network.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/settings-general.png" width="400" alt="General settings"><br><sub>General</sub></td>
+    <td align="center"><img src="docs/images/settings-screens.png" width="400" alt="Screens settings with thumbnails of the screens and their layouts"><br><sub>Screens</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/settings-pomodoro.png" width="400" alt="Pomodoro settings"><br><sub>Pomodoro</sub></td>
+    <td align="center"><img src="docs/images/settings-keepawake.png" width="400" alt="Keep Awake settings"><br><sub>Keep Awake</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/settings-usage.png" width="400" alt="AI Usage settings"><br><sub>AI Usage</sub></td>
+    <td></td>
+  </tr>
+</table>
 
 ## How it stays small and quiet
 
