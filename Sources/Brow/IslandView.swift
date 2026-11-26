@@ -16,6 +16,20 @@ struct IslandView: View {
     let actions: IslandActions
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// What the island's content does as it comes and goes. The shape leads: content arrives a moment after it
+    /// starts to grow, settling down from slightly small and blurred, and leaves quickly before the shape shrinks.
+    private var contentTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        let arrive = AnyTransition.opacity
+            .combined(with: .scale(scale: 0.94, anchor: .top))
+            .combined(with: .modifier(active: BlurModifier(radius: 6), identity: BlurModifier(radius: 0)))
+            .animation(.easeOut(duration: 0.26).delay(0.07))
+        let leave = AnyTransition.opacity
+            .combined(with: .scale(scale: 0.97, anchor: .top))
+            .animation(.easeIn(duration: 0.12))
+        return .asymmetric(insertion: arrive, removal: leave)
+    }
+
     var body: some View {
         let island = model.island
         let mode = model.mode
@@ -29,10 +43,10 @@ struct IslandView: View {
         ZStack(alignment: .top) {
             switch mode {
             case .open:
-                OpenIsland(model: model, actions: actions).transition(.opacity)
+                OpenIsland(model: model, actions: actions).transition(contentTransition)
             case .peek:
                 if let peek = island.peek {
-                    PeekView(peek: peek, model: model, actions: actions).transition(.opacity)
+                    PeekView(peek: peek, model: model, actions: actions).transition(contentTransition)
                 }
             case .closed:
                 if model.hasCompactContent {
@@ -51,6 +65,15 @@ struct IslandView: View {
         .animation(IslandLayout.animation(reduceMotion: reduceMotion), value: mode)
         .animation(IslandLayout.animation(reduceMotion: reduceMotion), value: size)
         .environment(\.colorScheme, .dark)
+    }
+}
+
+/// A blur for a transition to fade through.
+private struct BlurModifier: ViewModifier {
+    let radius: CGFloat
+
+    func body(content: Content) -> some View {
+        content.blur(radius: radius)
     }
 }
 
