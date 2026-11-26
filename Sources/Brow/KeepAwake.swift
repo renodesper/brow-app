@@ -80,7 +80,7 @@ final class KeepAwake {
     }
 
     /// What the island's card and menu offer: the four usual lengths, and the default too when it is another one,
-    /// so the outlined default is always there to pick.
+    /// so the default is always there to pick.
     var islandPresets: [Preset] {
         Self.choices.filter { preset in Self.presets.contains { $0.id == preset.id } || preset.id == defaultPresetID }
     }

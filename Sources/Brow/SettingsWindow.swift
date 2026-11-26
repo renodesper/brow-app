@@ -664,7 +664,7 @@ private struct KeepAwakePane: View {
                 }
                 .pickerStyle(.menu)
             } footer: {
-                FooterText("Outlined on the island’s Keep Awake card as the one to pick without thinking.")
+                FooterText("Added to the island’s Keep Awake buttons when it isn’t one of 30m, 1h, 2h or No end.")
             }
             Section {
                 ToggleRow(title: "Keep the display on",

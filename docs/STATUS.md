@@ -101,7 +101,7 @@ clicked in click mode. The default used to be a fixed 120 ms.
 
 Keep Awake's default length now offers the design's nine choices (5, 10, 15 and 30 minutes, 1, 2, 3 and 5 hours,
 indefinitely). The island's card and right-click menu keep their four usual lengths and add the default when it is
-another one, so the outlined default is always there to pick.
+another one, so the default is always there to pick (it is no longer outlined: all buttons look the same until one is on).
 
 A custom island size: General has "Match the notch" (the default) and "Custom size", with width and height sliders from
 the notch's own size up by 135 pt and 12 pt (never smaller than the notch). Widths are kept even so the island stays

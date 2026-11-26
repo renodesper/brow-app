@@ -227,12 +227,6 @@ struct KeepAwakeCard: View {
                     let isCurrent = keepAwake.isOn && keepAwake.presetID == preset.id
                     Button(preset.label) { keepAwake.start(preset) }
                         .buttonStyle(PillButtonStyle(isTinted: isCurrent, fillsWidth: true))
-                        .overlay {
-                            // The default length is outlined while off, as the one to pick without thinking.
-                            if !keepAwake.isOn && preset.id == keepAwake.defaultPresetID {
-                                Capsule().stroke(Palette.cyan.opacity(0.7), lineWidth: 1.5)
-                            }
-                        }
                 }
             }
         }
