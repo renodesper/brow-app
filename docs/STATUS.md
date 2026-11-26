@@ -75,8 +75,11 @@ Added afterwards: a hover delay (0.2 to 2 s, default 0.5 s, a slider in General)
 draws: the closed island grows by 8 pt wide and 2 pt tall while the pointer rests on it, which also shows it can be
 clicked in click mode. The default used to be a fixed 120 ms.
 
-Not built from the design, because each needs a new setting: a custom island size, calendars grouped by account, and
-a wider set of Keep Awake default lengths (5 and 10 minutes, 3 and 5 hours).
+Keep Awake's default length now offers the design's nine choices (5, 10, 15 and 30 minutes, 1, 2, 3 and 5 hours,
+indefinitely). The island's card and right-click menu keep their four usual lengths and add the default when it is
+another one, so the outlined default is always there to pick.
+
+Not built from the design, because each needs a new setting: a custom island size, and calendars grouped by account.
 
 Seen on a notched MacBook through screenshots on 26 Nov 2026: the open island with the new fonts and header, and the
 General, Screens, Calendar, Pomodoro, Keep Awake and AI Usage panes. Still unchecked: real clicks in Settings, drag
