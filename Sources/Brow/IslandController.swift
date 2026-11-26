@@ -103,11 +103,15 @@ final class IslandController {
                 pendingPeekEnd?.cancel()
                 return
             }
+            guard !model.island.isOpen else { return }
+            // The island grows a little while the pointer rests on it: it is about to open, or can be clicked.
+            model.island.isAnticipating = true
             guard model.preferences.openMode == .hover else { return }
-            // A short wait, so a pointer only passing through on its way elsewhere doesn't open the island.
+            // A wait, so a pointer only passing through on its way elsewhere doesn't open the island.
             pendingOpen?.cancel()
+            let delay = model.preferences.hoverDelay
             pendingOpen = Task { [weak self] in
-                try? await Task.sleep(for: .milliseconds(120))
+                try? await Task.sleep(for: .seconds(delay))
                 guard !Task.isCancelled else { return }
                 self?.setOpen(true)
             }
@@ -115,6 +119,7 @@ final class IslandController {
             // Checked against the frame itself, since resizing the panel under the pointer can report an exit
             // that never happened.
             pendingOpen?.cancel()
+            model.island.isAnticipating = false
             if model.island.peek != nil { endPeek(after: .seconds(1)) }
             guard model.island.isOpen else { return }
             // A short grace, so brushing past the edge doesn't shut the island. Coming back cancels it, and the
@@ -132,6 +137,7 @@ final class IslandController {
         guard model.island.isOpen != open else { return }
         model.island.isDragging = false
         model.island.dragOffset = 0
+        model.island.isAnticipating = false
         if open {
             pendingPeekEnd?.cancel()
             model.island.peek = nil
