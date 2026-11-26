@@ -155,6 +155,7 @@ struct PomodoroCard: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Countdown(pomodoro: pomodoro)
                     .font(.system(size: 32, weight: .semibold).monospacedDigit())
+                    .tracking(-0.5)
                     .monospacedDigit()
                 Text("of \(Pomodoro.clockText(timer.settings.length(of: timer.phase)))")
                     .font(.system(size: 11))
@@ -215,6 +216,7 @@ struct KeepAwakeCard: View {
                     }
                 }
                 .font(.system(size: 32, weight: .semibold).monospacedDigit())
+                .tracking(-0.5)
                 .monospacedDigit()
                 Text(detail)
                     .font(.system(size: 11))
