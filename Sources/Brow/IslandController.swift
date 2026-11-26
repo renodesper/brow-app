@@ -14,7 +14,8 @@ import SwiftUI
 final class IslandController {
     private let model: AppModel
     private let panel: IslandPanel
-    /// Its size never changes with the panel's: it is as large as the island ever gets and pinned to the top
+    /// Its size never changes with the panel's: it is as large as the island ever gets, plus the overshoot room,
+    /// and pinned to the top
     /// center, so resizing the panel cannot move the drawing for the frame before SwiftUI lays out again.
     private let host: NSHostingView<IslandView>
     /// Builds the right-click menu as it opens, so it always matches what is going on.
@@ -128,6 +129,7 @@ final class IslandController {
             // Read as it opens, so what it shows is current without anything polling in between.
             model.usage.refresh()
             model.calendar.refresh()
+            model.island.battery = PowerSource.battery()
         }
         model.island.isOpen = open
     }
@@ -209,15 +211,16 @@ final class IslandController {
         let hasPhysicalNotch = screen.safeAreaInsets.top > 0
         if state.hasPhysicalNotch != hasPhysicalNotch { state.hasPhysicalNotch = hasPhysicalNotch }
 
-        // Grow at once, so the island never draws outside the window; shrink only after the animation.
+        // Grow at once, with room for the spring to overshoot, so the island never draws outside the window;
+        // shrink to the exact size only once the spring has come to rest. The margin takes clicks until then.
         let target = model.islandSize
+        let room = CGSize(width: target.width + 2 * IslandLayout.overshoot, height: target.height + IslandLayout.overshoot)
         let current = panel.frame.size
-        let grown = CGSize(width: max(current.width, target.width), height: max(current.height, target.height))
+        let grown = CGSize(width: max(current.width, room.width), height: max(current.height, room.height))
         setFrame(size: grown, notch: notch, screen: screen)
         pendingShrink?.cancel()
-        guard grown != target else { return }
         pendingShrink = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(IslandLayout.openDuration + 0.1))
+            try? await Task.sleep(for: .seconds(IslandLayout.settlingDuration))
             guard !Task.isCancelled, let self else { return }
             self.setFrame(size: self.model.islandSize, notch: notch, screen: screen)
         }
@@ -233,7 +236,8 @@ final class IslandController {
     /// Gives the hosting view the size of the largest island, top centered in the panel. It only changes when
     /// the notch does; the panel resizing leaves it alone.
     private func fitHost(notch: CGSize) {
-        let largest = IslandLayout.size(mode: .open, notch: notch, glyphs: 3, layout: .four, hasDots: true)
+        let biggest = IslandLayout.size(mode: .open, notch: notch, glyphs: 3, layout: .four, hasDots: true)
+        let largest = CGSize(width: biggest.width + 2 * IslandLayout.overshoot, height: biggest.height + IslandLayout.overshoot)
         let bounds = panel.contentView?.bounds ?? .zero
         let frame = CGRect(x: ((bounds.width - largest.width) / 2).rounded(.down), y: bounds.height - largest.height,
                            width: largest.width, height: largest.height)

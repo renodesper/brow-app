@@ -1,6 +1,7 @@
 import Foundation
 import BrowCore
 import Observation
+import SwiftUI
 
 /// Everything the island shows, in one place. Each part is observable on its own, so a view redraws only for
 /// the part it reads.
@@ -47,7 +48,7 @@ final class AppModel {
     /// The island's size right now, shoulders included. The window and the drawing both take it from here.
     var islandSize: CGSize {
         IslandLayout.size(mode: mode, notch: island.notch, glyphs: compact.glyphs,
-                          layout: currentScreen.layout, hasDots: preferences.screens.count > 1)
+                          layout: currentScreen.layout, hasDots: preferences.screens.count > 1, peek: island.peek)
     }
 }
 
@@ -83,17 +84,34 @@ final class IslandState {
     /// The notch's size, or a notch-sized area on a screen without one.
     var notch = CGSize(width: 180, height: 32)
     var hasPhysicalNotch = true
+    /// The battery as it was when the island last opened, for the header. Nil on a Mac without one.
+    var battery: PowerSource.Battery?
 }
 
 /// The island's sizes, in points. The design was drawn at 1.25×, so its pixels are divided by 1.25 here.
 enum IslandLayout {
     static let openWidth: CGFloat = 624
-    static let peekWidth: CGFloat = 480
+    /// The canvas draws the event peek 560 px wide and the "Focus done" peek 640 px; points are pixels / 1.25.
+    static func peekWidth(for peek: Peek?) -> CGFloat {
+        switch peek {
+        case .phaseFinished: 512
+        case .eventStarted, nil: 448
+        }
+    }
     static let peekContentHeight: CGFloat = 64
     static let spacing: CGFloat = 10
     static let padding: CGFloat = 14
     static let dotsHeight: CGFloat = 22
-    static let openDuration = 0.35
+
+    /// The one spring every change of the island's size or content follows, so the shape and the cards settle
+    /// together.
+    static let spring = Spring(duration: 0.35, bounce: 0.15)
+    static var animation: Animation { .spring(spring) }
+    /// How long the spring takes to come to rest. The window must not shrink before then.
+    static var settlingDuration: TimeInterval { spring.settlingDuration }
+    /// Room beyond the island at the sides and below it while it animates, so a spring that overshoots is not
+    /// cut off by the window. The top has none: the island hangs from the top of the screen.
+    static let overshoot: CGFloat = 20
 
     /// Room on each side of the notch while something is going on; wider when several glyphs share it.
     static func wing(glyphs: Int) -> CGFloat {
@@ -126,13 +144,14 @@ enum IslandLayout {
         }
     }
 
-    static func size(mode: IslandMode, notch: CGSize, glyphs: Int, layout: ScreenLayout, hasDots: Bool) -> CGSize {
+    static func size(mode: IslandMode, notch: CGSize, glyphs: Int, layout: ScreenLayout, hasDots: Bool,
+                     peek: Peek? = nil) -> CGSize {
         let body: CGSize
         switch mode {
         case .closed:
             body = CGSize(width: notch.width + (glyphs > 0 ? 2 * wing(glyphs: glyphs) : 0), height: notch.height)
         case .peek:
-            body = CGSize(width: max(peekWidth, notch.width + 2 * wing(glyphs: 1)),
+            body = CGSize(width: max(peekWidth(for: peek), notch.width + 2 * wing(glyphs: 1)),
                           height: notch.height + peekContentHeight + padding)
         case .open:
             let rows = CGFloat(layout.rows)
