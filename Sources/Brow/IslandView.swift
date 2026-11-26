@@ -37,8 +37,10 @@ struct IslandView: View {
         let shoulder = IslandLayout.shoulder(for: mode)
         let shape = IslandShape(shoulder: shoulder, bottomRadius: IslandLayout.bottomRadius(for: mode))
         // On a screen without a notch there is nothing to blend into, so the island hides while it has
-        // nothing to show.
-        let isVisible = island.hasPhysicalNotch || mode != .closed || model.hasCompactContent
+        // nothing to show, unless the owner wants a small pill there to point at.
+        let isIdlePill = !island.hasPhysicalNotch && mode == .closed && !model.hasCompactContent
+            && model.preferences.showsPillWithoutNotch
+        let isVisible = island.hasPhysicalNotch || mode != .closed || model.hasCompactContent || isIdlePill
 
         ZStack(alignment: .top) {
             switch mode {
@@ -58,6 +60,10 @@ struct IslandView: View {
         .frame(width: size.width, height: size.height, alignment: .top)
         .background(shape.fill(Color.black))
         .clipShape(shape)
+        .overlay {
+            // A faint rim, so the black pill shows against a dark menu bar too.
+            if isIdlePill { shape.stroke(Color.white.opacity(0.22), lineWidth: 1) }
+        }
         .opacity(isVisible ? 1 : 0)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         // The window sits in the screen's unsafe area on purpose: the notch is the whole point.
