@@ -14,6 +14,9 @@ import SwiftUI
 final class IslandController {
     private let model: AppModel
     private let panel: IslandPanel
+    /// Its size never changes with the panel's: it is as large as the island ever gets and pinned to the top
+    /// center, so resizing the panel cannot move the drawing for the frame before SwiftUI lays out again.
+    private let host: NSHostingView<IslandView>
     /// Builds the right-click menu as it opens, so it always matches what is going on.
     private let makeMenu: () -> NSMenu
     private var pendingOpen: Task<Void, Never>?
@@ -30,12 +33,12 @@ final class IslandController {
 
         let hover = HoverView()
         panel.contentView = hover
-        let host = NSHostingView(rootView: IslandView(model: model, actions: IslandActions(
+        host = NSHostingView(rootView: IslandView(model: model, actions: IslandActions(
             open: {}, showScreen: { _ in }, endPeek: {})))
         // The panel's size is set here, never by SwiftUI's layout.
         host.sizingOptions = []
-        host.frame = hover.bounds
-        host.autoresizingMask = [.width, .height]
+        // Fixed size, anchored to the top and centered: only the margins give way when the panel resizes.
+        host.autoresizingMask = [.minXMargin, .maxXMargin, .minYMargin]
         hover.addSubview(host)
 
         // Now that self is whole, the views get actions that reach it.
@@ -224,6 +227,17 @@ final class IslandController {
         let frame = CGRect(x: (notch.midX - size.width / 2).rounded(.down), y: screen.frame.maxY - size.height,
                            width: size.width, height: size.height)
         if panel.frame != frame { panel.setFrame(frame, display: true) }
+        fitHost(notch: model.island.notch)
+    }
+
+    /// Gives the hosting view the size of the largest island, top centered in the panel. It only changes when
+    /// the notch does; the panel resizing leaves it alone.
+    private func fitHost(notch: CGSize) {
+        let largest = IslandLayout.size(mode: .open, notch: notch, glyphs: 3, layout: .four, hasDots: true)
+        let bounds = panel.contentView?.bounds ?? .zero
+        let frame = CGRect(x: ((bounds.width - largest.width) / 2).rounded(.down), y: bounds.height - largest.height,
+                           width: largest.width, height: largest.height)
+        if host.frame != frame { host.frame = frame }
     }
 
     /// The notch in screen coordinates: what lies between the two menu bar areas beside the camera. On a screen
