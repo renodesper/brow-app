@@ -7,8 +7,8 @@ Last updated 26 Nov 2026: v0.2.0 (v0.1.0 plus the design changes listed below), 
 All four features are written. **It now builds and runs:** on 26 Nov 2026, with Xcode 27.2 (macOS 27 SDK), `swift build`
 and `make run` succeed and all 41 unit tests pass. The only compiler error was a name clash between
 `BrowCore.Widget` and `SwiftUI.Widget`, fixed by qualifying the name. Idle, the running app used about 0% CPU and
-42 MB (one reading, nothing running). Everything about how the island looks and behaves on a real notch is still
-unchecked: see the QA checklist in the Obsidian vault.
+42 MB (one reading, nothing running). How the island looks was checked on a notch through screenshots; how it
+behaves in real use is mostly unchecked: see the QA checklist in the Obsidian vault.
 
 The full Xcode app is needed, not only the Command Line Tools: SwiftUI's `@State` is a macro whose plugin ships
 with Xcode, and without it `SettingsWindow.swift` does not compile.
@@ -62,9 +62,21 @@ Things to check first on a Mac, beyond compiling:
 - The Settings window comes to the front from the right-click menu, though the app has no Dock icon.
 - The battery cut-off turns Keep Awake off when unplugged below the level.
 
-Not done from the design: fonts (the design uses Inter and Manrope; the app uses the system font), drag to reorder
-screens (Settings has Move Left and Move Right instead), and the settings' custom look (the panes use macOS's own
-grouped form, tinted navy).
+Closed later the same day (PR #2): Inter and Manrope are bundled in `Support/Fonts` and used for text and numbers
+(`Typeface.swift`); the event peek is 448 pt and "Focus done" 512 pt wide; the open header shows the battery
+percentage, read when the island opens, instead of the screen name; Settings has the canvas's light look
+(`SettingsKit.swift`: pill sidebar, bordered selects and number fields, pill choices, tiles, switches); screens
+reorder by dragging their thumbnails, with Move Left and Move Right kept in the right-click menu and as
+accessibility actions. PR #2 also gives the spring 20 pt of room to overshoot and makes every change of size follow
+one spring.
+
+Not built from the design, because each needs a new setting: a hover-delay slider with an intermediate "grows a
+little" hover state, a custom island size, calendars grouped by account, and a wider set of Keep Awake default
+lengths (5 and 10 minutes, 3 and 5 hours).
+
+Seen on a notched MacBook through screenshots on 26 Nov 2026: the open island with the new fonts and header, and the
+General, Screens, Calendar, Pomodoro, Keep Awake and AI Usage panes. Still unchecked: real clicks in Settings, drag
+and drop of screens, the peeks, swiping between screens, and the overshoot headroom by eye.
 
 ## Features
 
