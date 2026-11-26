@@ -87,6 +87,12 @@ final class PomodoroModel {
         ) { [weak self] _ in
             Task { @MainActor in self?.finishPhaseIfDue() }
         }
+        // Carry on where the last run left off. A phase that ended while the app was closed is finished quietly.
+        if let data = defaults.data(forKey: Key.state),
+           let state = try? JSONDecoder().decode(Pomodoro.State.self, from: data) {
+            timer.restore(state, at: Date())
+            armEndOfPhase()
+        }
     }
 
     /// What the one start button means right now.
@@ -108,16 +114,19 @@ final class PomodoroModel {
             timer.start(at: Date())
         }
         armEndOfPhase()
+        saveState()
     }
 
     func skip() {
         timer.skip()
         armEndOfPhase()
+        saveState()
     }
 
     func reset() {
         timer.reset()
         armEndOfPhase()
+        saveState()
     }
 
     /// Takes effect from the next time the phase starts; a phase already running keeps its end.
@@ -141,6 +150,12 @@ final class PomodoroModel {
             onPhaseFinished?(finished)
         }
         armEndOfPhase()
+        saveState()
+    }
+
+    /// Remembers where the cycle is, so a relaunch can carry on.
+    private func saveState() {
+        defaults.set(try? JSONEncoder().encode(timer.state), forKey: Key.state)
     }
 
     /// One sleeping task until the running phase ends, and none while nothing runs. The display's ticking is
@@ -170,6 +185,7 @@ final class PomodoroModel {
         static let sound = "pomodoro.sound"
         static let showsBesideNotch = "pomodoro.showsBesideNotch"
         static let rounds = "pomodoro.roundsUntilLongBreak"
+        static let state = "pomodoro.state"
         static func minutes(_ phase: Pomodoro.Phase) -> String { "pomodoro.minutes.\(phase.rawValue)" }
     }
 }
