@@ -68,7 +68,7 @@ final class IslandPreferences {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        openMode = OpenMode(rawValue: defaults.string(forKey: Key.openMode) ?? "") ?? .hover
+        openMode = OpenMode(rawValue: defaults.string(forKey: Key.openMode) ?? "") ?? .click
         let savedDelay = defaults.object(forKey: Key.hoverDelay) as? Double ?? Self.defaultHoverDelay
         hoverDelay = min(max(savedDelay, Self.hoverDelayRange.lowerBound), Self.hoverDelayRange.upperBound)
         showsLaunchHello = defaults.bool(Key.showsLaunchHello, default: true)
