@@ -14,7 +14,9 @@ one screen of cards; swipe left or right with two fingers to see the others. Fou
   A Join button appears on events with a Zoom, Google Meet, Microsoft Teams or Webex link.
 
 **Right-click the island** for Keep Awake, Pomodoro, Settings and Quit. There is no Dock icon and no menu bar icon.
-Opening the app again from Finder also shows Settings.
+Opening the app again from Finder also shows Settings, and so does **⌃⌥⌘,** (Control-Option-Command-Comma) from any app,
+which needs no permission. If another app already holds that combination, Brow has no shortcut and the Settings text
+doesn't mention one.
 
 **Settings** has a pane for each part: General, Screens, Calendar, Pomodoro, Keep Awake and AI Usage. Under
 Screens you choose how many screens the open island has (up to five) and which cards each one shows: one card

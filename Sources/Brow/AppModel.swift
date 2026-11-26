@@ -13,6 +13,8 @@ final class AppModel {
     let pomodoro: PomodoroModel
     let usage: UsageModel
     let calendar: CalendarModel
+    /// The key combination that opens Settings from anywhere, as text, or nil when it could not be registered.
+    var settingsShortcut: String?
 
     init() {
         island = IslandState()

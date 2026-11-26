@@ -49,6 +49,7 @@ machine with no Swift for macOS, and first compiled later the same day (see abov
 | Screens: the open island shows one screen at a time; two-finger swipe or the dots move between them; one, two or four cards per screen; the calendar alone gets a wide card with today's date | `IslandScreens.swift` (tested), `OpenIsland`, `ScreenView`, `CalendarWideCard` |
 | Peeks: an event starting and a phase ending show a short banner instead of the whole island; "Focus done" has Start break and Skip break | `PeekView`, `IslandController.showPeek` |
 | No menu bar icon: right-click the island for Keep Awake, Pomodoro, Settings… and Quit | `IslandMenu.swift`, the right-click monitor in `IslandController` |
+| ⌃⌥⌘, opens Settings from any app, registered with Carbon's `RegisterEventHotKey` (public, no permission, nothing running while idle); skipped, and left out of the Settings text, if another app has it | `GlobalShortcut.swift`, `BrowApp.swift` |
 | A Settings window with six panes: General, Screens, Calendar, Pomodoro, Keep Awake, AI Usage | `SettingsWindow.swift` |
 | New settings: open on hover or only on click; a master switch and per-feature switches for beside the notch; event lead 5/10/15/30 min; which calendars; all-day events; rounds until a long break; start breaks and focus automatically, separately; end sound; Keep Awake default length, Mac-only mode, battery cut-off at 10/20/30%; Codex on or off; amber from 80%; reset times | the models, `Preferences.swift` |
 
