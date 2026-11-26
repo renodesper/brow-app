@@ -8,7 +8,7 @@ All four features are written. **It now builds and runs:** on 26 Nov 2026, with 
 and `make run` succeed and all 68 unit tests pass. The only compiler error was a name clash between
 `BrowCore.Widget` and `SwiftUI.Widget`, fixed by qualifying the name. Idle, the running app used about 0% CPU and
 42 MB (one reading, nothing running). How the island looks was checked on a notch through screenshots; how it
-behaves in real use is mostly unchecked: see the QA checklist in the Obsidian vault.
+behaves in real use is mostly unchecked.
 
 The full Xcode app is needed, not only the Command Line Tools: SwiftUI's `@State` is a macro whose plugin ships
 with Xcode, and without it `SettingsWindow.swift` does not compile.
@@ -38,8 +38,8 @@ Size: about 3,440 lines of code in 17 files (2,780 in the app, 660 in `BrowCore`
 
 ## 26 Nov 2026: v2, the native macOS look
 
-Brow now looks like a Mac app and follows light and dark mode (ADR-017 in the Obsidian vault; screens in
-`docs/design/v2/`). Built in six pull requests, in this order. `make test` passes (68 tests) and `make app` builds;
+Brow now looks like a Mac app and follows light and dark mode (the design is kept outside this
+repository). Built in six pull requests, in this order. `make test` passes (68 tests) and `make app` builds;
 none of it has been looked at on a notched MacBook yet.
 
 | Step | What changed |

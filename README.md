@@ -182,7 +182,6 @@ scripts/make-dmg.sh        Wraps the app in a disk image
 docs/STATUS.md             Features, progress, what is not built, and what to improve
 docs/RELEASING.md          Releasing, signing, notarization and Homebrew
 docs/UI_MOTION.md          Notes on the island's motion
-docs/design/v2/            The design, as source
 ```
 
 To add a feature: write an `@Observable` model, add it to `AppModel`, add a case to `Widget` in
