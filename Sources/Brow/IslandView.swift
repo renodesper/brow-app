@@ -319,6 +319,8 @@ private struct PeekView: View {
                     if let url = event.meetingURL { JoinButton(url: url, isProminent: true) }
                 case .phaseFinished(let phase):
                     phaseFinished(phase)
+                case .hello:
+                    hello
                 }
             }
             .padding(.horizontal, 18)
@@ -327,6 +329,18 @@ private struct PeekView: View {
         .foregroundStyle(.white)
         .contentShape(Rectangle())
         .onTapGesture { actions.open() }
+    }
+
+    @ViewBuilder
+    private var hello: some View {
+        Image(systemName: "hand.wave.fill")
+            .font(.system(size: 18, weight: .bold))
+            .foregroundStyle(Palette.teal)
+            .frame(width: 40, height: 40)
+            .background(Palette.teal.opacity(0.16), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+        titles("Brow is running",
+               model.preferences.openMode == .hover ? "Rest the pointer on the notch to open it." : "Click the notch to open it.")
+        Spacer(minLength: 8)
     }
 
     @ViewBuilder

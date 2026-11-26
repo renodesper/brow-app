@@ -41,6 +41,11 @@ final class IslandPreferences {
         didSet { defaults.set(customHeight, forKey: Key.customHeight) }
     }
 
+    /// Whether the island opens a little to say hello as the app starts.
+    var showsLaunchHello: Bool {
+        didSet { defaults.set(showsLaunchHello, forKey: Key.showsLaunchHello) }
+    }
+
     /// The master switch for everything beside the notch. Each feature also has its own.
     var showsLiveActivities: Bool {
         didSet { defaults.set(showsLiveActivities, forKey: Key.showsLiveActivities) }
@@ -66,6 +71,7 @@ final class IslandPreferences {
         openMode = OpenMode(rawValue: defaults.string(forKey: Key.openMode) ?? "") ?? .hover
         let savedDelay = defaults.object(forKey: Key.hoverDelay) as? Double ?? Self.defaultHoverDelay
         hoverDelay = min(max(savedDelay, Self.hoverDelayRange.lowerBound), Self.hoverDelayRange.upperBound)
+        showsLaunchHello = defaults.bool(Key.showsLaunchHello, default: true)
         matchesNotch = defaults.bool(Key.matchesNotch, default: true)
         customWidth = defaults.double(forKey: Key.customWidth)
         customHeight = defaults.double(forKey: Key.customHeight)
@@ -77,6 +83,7 @@ final class IslandPreferences {
 
     private enum Key {
         static let openMode = "island.openMode"
+        static let showsLaunchHello = "island.showsLaunchHello"
         static let hoverDelay = "island.hoverDelay"
         static let matchesNotch = "island.matchesNotch"
         static let customWidth = "island.customWidth"
