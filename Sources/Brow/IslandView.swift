@@ -213,6 +213,11 @@ private struct OpenIsland: View {
                 .transition(reduceMotion ? .opacity : .push(from: island.movedForward ? .trailing : .leading))
                 .padding(.top, IslandLayout.spacing)
                 .padding(.horizontal, 12)
+                // Follows the fingers with no animation of its own; when they lift it springs back or carries on
+                // with the change of screen.
+                .offset(x: island.dragOffset)
+                .animation(island.isDragging ? nil : IslandLayout.animation(reduceMotion: reduceMotion),
+                           value: island.dragOffset)
                 .frame(maxWidth: .infinity)
                 .clipped()
 

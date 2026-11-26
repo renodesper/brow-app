@@ -81,6 +81,10 @@ final class IslandState {
     var screenIndex = 0
     /// Whether the last change of screen went forward, for the direction the cards slide in from.
     var movedForward = true
+    /// How far the current screen has been dragged from rest by a swipe in progress, in points.
+    var dragOffset: CGFloat = 0
+    /// Whether fingers are on the trackpad moving the screen: it follows them with no animation of its own.
+    var isDragging = false
     /// The notch's size, or a notch-sized area on a screen without one.
     var notch = CGSize(width: 180, height: 32)
     var hasPhysicalNotch = true
