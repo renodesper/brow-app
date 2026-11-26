@@ -1,5 +1,6 @@
 import AppKit
 import BrowCore
+import Carbon.HIToolbox
 
 /// AppKit owns the app's lifecycle. There is no storyboard and no SwiftUI `App`, which would bring a scene and
 /// a main menu this app never shows.
@@ -21,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var island: IslandController!
     private var menu: IslandMenu!
     private var settings: SettingsWindowController!
+    private var settingsShortcut: GlobalShortcut?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let model = AppModel()
@@ -29,6 +31,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // No Dock icon and no menu bar icon: a right-click on the island is the way to Settings and Quit.
         menu = IslandMenu(model: model, openSettings: { [weak self] in self?.settings.show() })
         island = IslandController(model: model, makeMenu: { [weak self] in self?.menu.make() ?? NSMenu() })
+
+        // With no Dock icon and no menu bar icon, the island can be out of reach (hidden behind a full-screen app,
+        // say). This shortcut always gets to Settings. It is left out of the Settings text if another app has it.
+        settingsShortcut = GlobalShortcut(keyCode: kVK_ANSI_Comma, modifiers: controlKey | optionKey | cmdKey) { [weak self] in
+            self?.settings.show()
+        }
+        if settingsShortcut != nil { model.settingsShortcut = "⌃⌥⌘," }
 
         model.pomodoro.onPhaseFinished = { [weak self] phase in
             guard let self else { return }

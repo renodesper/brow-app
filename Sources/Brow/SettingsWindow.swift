@@ -71,7 +71,7 @@ struct SettingsView: View {
             SettingsSidebar(selection: $pane)
             Group {
                 switch pane {
-                case .general: GeneralPane(preferences: model.preferences)
+                case .general: GeneralPane(preferences: model.preferences, shortcut: model.settingsShortcut)
                 case .screens: ScreensPane(preferences: model.preferences)
                 case .calendar: CalendarPane(calendar: model.calendar)
                 case .pomodoro: PomodoroPane(pomodoro: model.pomodoro)
@@ -92,6 +92,7 @@ struct SettingsView: View {
 
 private struct GeneralPane: View {
     @Bindable var preferences: IslandPreferences
+    let shortcut: String?
     @State private var opensAtLogin = SMAppService.mainApp.status == .enabled
     @State private var loginError: String?
 
@@ -107,7 +108,9 @@ private struct GeneralPane: View {
             }
             SettingsDivider()
             SettingsSection(title: "Opening the island",
-                            detail: "Right-click the island any time for Keep Awake, Pomodoro and these settings.") {
+                            detail: shortcut.map {
+                                "Right-click the island any time for Keep Awake, Pomodoro and these settings, or press \($0) from any app to open them."
+                            } ?? "Right-click the island any time for Keep Awake, Pomodoro and these settings.") {
                 CheckRow(title: "Open when the pointer rests on the notch",
                          detail: "Opens after a short pause and closes when the pointer leaves. Turn it off to open the island only when you click the notch.",
                          isOn: Binding(
