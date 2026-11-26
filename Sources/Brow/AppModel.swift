@@ -50,7 +50,8 @@ final class AppModel {
     /// The island's size right now, shoulders included. The window and the drawing both take it from here.
     var islandSize: CGSize {
         IslandLayout.size(mode: mode, notch: island.notch, glyphs: compact.glyphs,
-                          layout: currentScreen.layout, hasDots: preferences.screens.count > 1, peek: island.peek)
+                          layout: currentScreen.layout, hasDots: preferences.screens.count > 1, peek: island.peek,
+                          anticipating: island.isAnticipating)
     }
 }
 
@@ -90,6 +91,9 @@ final class IslandState {
     /// The notch's size, or a notch-sized area on a screen without one.
     var notch = CGSize(width: 180, height: 32)
     var hasPhysicalNotch = true
+    /// Whether the pointer rests on the closed island, which then grows a little: it is about to open, or can be
+    /// clicked open.
+    var isAnticipating = false
     /// The battery as it was when the island last opened, for the header. Nil on a Mac without one.
     var battery: PowerSource.Battery?
 }
@@ -160,12 +164,17 @@ enum IslandLayout {
         }
     }
 
+    /// How much a closed island grows while the pointer rests on it.
+    static let anticipationGrowth = CGSize(width: 8, height: 2)
+
     static func size(mode: IslandMode, notch: CGSize, glyphs: Int, layout: ScreenLayout, hasDots: Bool,
-                     peek: Peek? = nil) -> CGSize {
+                     peek: Peek? = nil, anticipating: Bool = false) -> CGSize {
         let body: CGSize
         switch mode {
         case .closed:
-            body = CGSize(width: notch.width + (glyphs > 0 ? 2 * wing(glyphs: glyphs) : 0), height: notch.height)
+            let growth = anticipating ? anticipationGrowth : .zero
+            body = CGSize(width: notch.width + (glyphs > 0 ? 2 * wing(glyphs: glyphs) : 0) + growth.width,
+                          height: notch.height + growth.height)
         case .peek:
             body = CGSize(width: max(peekWidth(for: peek), notch.width + 2 * wing(glyphs: 1)),
                           height: notch.height + peekContentHeight + padding)

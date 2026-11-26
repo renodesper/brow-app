@@ -112,10 +112,13 @@ private struct GeneralPane: View {
                                 "Right-click the island any time for Keep Awake, Pomodoro and these settings, or press \($0) from any app to open them."
                             } ?? "Right-click the island any time for Keep Awake, Pomodoro and these settings.") {
                 CheckRow(title: "Open when the pointer rests on the notch",
-                         detail: "Opens after a short pause and closes when the pointer leaves. Turn it off to open the island only when you click the notch.",
+                         detail: "While the pointer rests on the notch the island grows a little; once the delay has passed it opens fully. Moving away before then cancels it, and it closes when the pointer leaves. Turn it off to open the island only when you click the notch.",
                          isOn: Binding(
                             get: { preferences.openMode == .hover },
                             set: { preferences.openMode = $0 ? .hover : .click }))
+                HoverDelaySlider(delay: $preferences.hoverDelay)
+                    .padding(.leading, 23)
+                    .disabled(preferences.openMode != .hover)
             }
             SettingsDivider()
             SettingsSection(title: "Beside the notch") {
@@ -138,6 +141,35 @@ private struct GeneralPane: View {
             loginError = "Couldn’t change this: \(error.localizedDescription)"
         }
         opensAtLogin = SMAppService.mainApp.status == .enabled
+    }
+}
+
+/// How long the pointer rests on the notch before the island opens, from 0.2 s to 2 s.
+private struct HoverDelaySlider: View {
+    @Binding var delay: Double
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        HStack(spacing: 11) {
+            Text("Hover delay").font(SettingsStyle.label)
+            Text("0.2 s").font(SettingsStyle.caption).foregroundStyle(SettingsStyle.hint)
+            Slider(value: $delay, in: IslandPreferences.hoverDelayRange, step: 0.1)
+                .tint(Palette.navy)
+                .accessibilityLabel("Hover delay")
+                .accessibilityValue(Self.text(delay))
+            Text("2 s").font(SettingsStyle.caption).foregroundStyle(SettingsStyle.hint)
+            Text(Self.text(delay))
+                .font(Typeface.text(11, weight: .bold))
+                .foregroundStyle(Palette.navy)
+                .monospacedDigit()
+                .frame(minWidth: 38, alignment: .trailing)
+        }
+        .frame(maxWidth: 460)
+        .opacity(isEnabled ? 1 : 0.45)
+    }
+
+    private static func text(_ seconds: Double) -> String {
+        seconds.formatted(.number.precision(.fractionLength(1))) + " s"
     }
 }
 

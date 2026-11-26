@@ -18,6 +18,14 @@ final class IslandPreferences {
         didSet { defaults.set(openMode.rawValue, forKey: Key.openMode) }
     }
 
+    /// How long the pointer rests on the notch, in seconds, before the island opens.
+    static let hoverDelayRange = 0.2...2.0
+    static let defaultHoverDelay = 0.5
+
+    var hoverDelay: Double {
+        didSet { defaults.set(hoverDelay, forKey: Key.hoverDelay) }
+    }
+
     /// The master switch for everything beside the notch. Each feature also has its own.
     var showsLiveActivities: Bool {
         didSet { defaults.set(showsLiveActivities, forKey: Key.showsLiveActivities) }
@@ -41,6 +49,8 @@ final class IslandPreferences {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         openMode = OpenMode(rawValue: defaults.string(forKey: Key.openMode) ?? "") ?? .hover
+        let savedDelay = defaults.object(forKey: Key.hoverDelay) as? Double ?? Self.defaultHoverDelay
+        hoverDelay = min(max(savedDelay, Self.hoverDelayRange.lowerBound), Self.hoverDelayRange.upperBound)
         showsLiveActivities = defaults.bool(Key.showsLiveActivities, default: true)
         screens = IslandScreens.decode(defaults.data(forKey: Key.screens))
         opensOnLastScreen = defaults.bool(Key.opensOnLastScreen, default: false)
@@ -49,6 +59,7 @@ final class IslandPreferences {
 
     private enum Key {
         static let openMode = "island.openMode"
+        static let hoverDelay = "island.hoverDelay"
         static let showsLiveActivities = "island.showsLiveActivities"
         static let screens = "island.screens"
         static let opensOnLastScreen = "island.opensOnLastScreen"

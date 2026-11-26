@@ -71,9 +71,12 @@ reorder by dragging their thumbnails, with Move Left and Move Right kept in the 
 accessibility actions. PR #2 also gives the spring 20 pt of room to overshoot and makes every change of size follow
 one spring.
 
-Not built from the design, because each needs a new setting: a hover-delay slider with an intermediate "grows a
-little" hover state, a custom island size, calendars grouped by account, and a wider set of Keep Awake default
-lengths (5 and 10 minutes, 3 and 5 hours).
+Added afterwards: a hover delay (0.2 to 2 s, default 0.5 s, a slider in General) and the intermediate state the design
+draws: the closed island grows by 8 pt wide and 2 pt tall while the pointer rests on it, which also shows it can be
+clicked in click mode. The default used to be a fixed 120 ms.
+
+Not built from the design, because each needs a new setting: a custom island size, calendars grouped by account, and
+a wider set of Keep Awake default lengths (5 and 10 minutes, 3 and 5 hours).
 
 Seen on a notched MacBook through screenshots on 26 Nov 2026: the open island with the new fonts and header, and the
 General, Screens, Calendar, Pomodoro, Keep Awake and AI Usage panes. Still unchecked: real clicks in Settings, drag
