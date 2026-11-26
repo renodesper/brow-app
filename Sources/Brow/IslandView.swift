@@ -220,6 +220,8 @@ private struct OpenIsland: View {
                 .transition(reduceMotion ? .opacity : .push(from: island.movedForward ? .trailing : .leading))
                 .padding(.top, IslandLayout.spacing)
                 .padding(.horizontal, 12)
+                // Drawn as one flat image so a screen dragged partly out of view keeps its card backgrounds.
+                .drawingGroup()
                 // Follows the fingers with no animation of its own; when they lift it springs back or carries on
                 // with the change of screen.
                 .offset(x: island.dragOffset)
