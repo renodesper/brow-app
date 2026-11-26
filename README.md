@@ -10,6 +10,7 @@
   <a href="https://github.com/renodesper/brow/actions/workflows/release.yml"><img src="https://github.com/renodesper/brow/actions/workflows/release.yml/badge.svg" alt="Release workflow status"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-0a84ff?logo=apple&logoColor=white" alt="macOS 14 or later">
   <img src="https://img.shields.io/badge/Swift-SwiftUI%20%2B%20AppKit-f05138?logo=swift&logoColor=white" alt="Swift, SwiftUI and AppKit">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0a84ff" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/dependencies-none-30d158" alt="No dependencies">
   <img src="https://img.shields.io/badge/network-never-30d158" alt="Never uses the network">
 </p>
@@ -182,7 +183,6 @@ scripts/make-dmg.sh        Wraps the app in a disk image
 docs/STATUS.md             Features, progress, what is not built, and what to improve
 docs/RELEASING.md          Releasing, signing, notarization and Homebrew
 docs/UI_MOTION.md          Notes on the island's motion
-docs/design/v2/            The design, as source
 ```
 
 To add a feature: write an `@Observable` model, add it to `AppModel`, add a case to `Widget` in
@@ -192,3 +192,7 @@ To add a feature: write an `@Observable` model, add it to `AppModel`, add a case
 
 Usage warnings at a threshold, other AI tools, hiding over full-screen apps, and "time to leave" (it needs your
 location and a route lookup). See [docs/STATUS.md](docs/STATUS.md) for the whole picture.
+
+## License
+
+[MIT](LICENSE). Brow bundles no third-party code or fonts, so there is nothing else to credit.
