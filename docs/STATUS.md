@@ -79,7 +79,11 @@ Keep Awake's default length now offers the design's nine choices (5, 10, 15 and 
 indefinitely). The island's card and right-click menu keep their four usual lengths and add the default when it is
 another one, so the outlined default is always there to pick.
 
-Not built from the design, because each needs a new setting: a custom island size, and calendars grouped by account.
+A custom island size: General has "Match the notch" (the default) and "Custom size", with width and height sliders from
+the notch's own size up by 135 pt and 12 pt (never smaller than the notch). Widths are kept even so the island stays
+centred. Reset to notch size puts both back.
+
+Not built from the design, because it needs the account of each calendar: calendars grouped by account.
 
 Seen on a notched MacBook through screenshots on 26 Nov 2026: the open island with the new fonts and header, and the
 General, Screens, Calendar, Pomodoro, Keep Awake and AI Usage panes. Still unchecked: real clicks in Settings, drag

@@ -71,7 +71,7 @@ struct SettingsView: View {
             SettingsSidebar(selection: $pane)
             Group {
                 switch pane {
-                case .general: GeneralPane(preferences: model.preferences, shortcut: model.settingsShortcut)
+                case .general: GeneralPane(preferences: model.preferences, island: model.island, shortcut: model.settingsShortcut)
                 case .screens: ScreensPane(preferences: model.preferences)
                 case .calendar: CalendarPane(calendar: model.calendar)
                 case .pomodoro: PomodoroPane(pomodoro: model.pomodoro)
@@ -92,6 +92,7 @@ struct SettingsView: View {
 
 private struct GeneralPane: View {
     @Bindable var preferences: IslandPreferences
+    let island: IslandState
     let shortcut: String?
     @State private var opensAtLogin = SMAppService.mainApp.status == .enabled
     @State private var loginError: String?
@@ -121,12 +122,66 @@ private struct GeneralPane: View {
                     .disabled(preferences.openMode != .hover)
             }
             SettingsDivider()
+            islandSize
+            SettingsDivider()
             SettingsSection(title: "Beside the notch") {
                 CheckRow(title: "Show live activities beside the notch",
                          detail: "Event countdown, Pomodoro time and Keep Awake while they run. Each can be turned off in its own section.",
                          isOn: $preferences.showsLiveActivities)
             }
         }
+    }
+
+    /// The closed island's size: the notch's own, or a custom one that is never smaller.
+    private var islandSize: some View {
+        let detected = island.detectedNotch
+        return SettingsSection(title: "Island size") {
+            RadioRow(title: "Match the notch",
+                     detail: "Detected on this Mac: \(Int(detected.width)) × \(Int(detected.height)) pt.",
+                     value: true, selection: $preferences.matchesNotch)
+            HStack(spacing: 8) {
+                RadioRow(title: "Custom size", value: false, selection: $preferences.matchesNotch)
+                Text("· never smaller than the notch").font(SettingsStyle.caption).foregroundStyle(SettingsStyle.hint)
+                Spacer()
+                Button("Reset to notch size") {
+                    preferences.customWidth = Double(detected.width)
+                    preferences.customHeight = Double(detected.height)
+                }
+                .buttonStyle(GhostButtonStyle())
+            }
+            HStack(alignment: .top, spacing: 24) {
+                sizeSlider("Width", value: $preferences.customWidth, notch: Double(detected.width),
+                           extra: NotchSizing.extraWidth)
+                sizeSlider("Height", value: $preferences.customHeight, notch: Double(detected.height),
+                           extra: NotchSizing.extraHeight)
+            }
+            .padding(.leading, 23)
+            .disabled(preferences.matchesNotch)
+            .opacity(preferences.matchesNotch ? 0.45 : 1)
+        }
+        .onChange(of: preferences.matchesNotch) { _, matches in
+            // The first time a custom size is asked for, it starts a little larger than the notch.
+            guard !matches, preferences.customWidth == 0 || preferences.customHeight == 0 else { return }
+            let start = NotchSizing.starting(detectedWidth: Double(detected.width), detectedHeight: Double(detected.height))
+            preferences.customWidth = start.width
+            preferences.customHeight = start.height
+        }
+    }
+
+    private func sizeSlider(_ title: String, value: Binding<Double>, notch: Double, extra: Double) -> some View {
+        let shown = Int(max(value.wrappedValue, notch))
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title).font(SettingsStyle.label)
+                Spacer()
+                Text("\(shown) pt").font(SettingsStyle.label).foregroundStyle(Palette.navy).monospacedDigit()
+            }
+            Slider(value: value, in: notch...(notch + extra))
+                .tint(Palette.navy)
+                .accessibilityLabel(title)
+                .accessibilityValue("\(shown) points")
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private func setOpensAtLogin(_ on: Bool) {

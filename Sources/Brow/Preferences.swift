@@ -26,6 +26,21 @@ final class IslandPreferences {
         didSet { defaults.set(hoverDelay, forKey: Key.hoverDelay) }
     }
 
+    /// Whether the closed island is exactly the notch's size, or the custom size below.
+    var matchesNotch: Bool {
+        didSet { defaults.set(matchesNotch, forKey: Key.matchesNotch) }
+    }
+
+    /// The closed island's custom width and height in points, used when `matchesNotch` is off and never less than the
+    /// notch. Zero until the owner first asks for a custom size.
+    var customWidth: Double {
+        didSet { defaults.set(customWidth, forKey: Key.customWidth) }
+    }
+
+    var customHeight: Double {
+        didSet { defaults.set(customHeight, forKey: Key.customHeight) }
+    }
+
     /// The master switch for everything beside the notch. Each feature also has its own.
     var showsLiveActivities: Bool {
         didSet { defaults.set(showsLiveActivities, forKey: Key.showsLiveActivities) }
@@ -51,6 +66,9 @@ final class IslandPreferences {
         openMode = OpenMode(rawValue: defaults.string(forKey: Key.openMode) ?? "") ?? .hover
         let savedDelay = defaults.object(forKey: Key.hoverDelay) as? Double ?? Self.defaultHoverDelay
         hoverDelay = min(max(savedDelay, Self.hoverDelayRange.lowerBound), Self.hoverDelayRange.upperBound)
+        matchesNotch = defaults.bool(Key.matchesNotch, default: true)
+        customWidth = defaults.double(forKey: Key.customWidth)
+        customHeight = defaults.double(forKey: Key.customHeight)
         showsLiveActivities = defaults.bool(Key.showsLiveActivities, default: true)
         screens = IslandScreens.decode(defaults.data(forKey: Key.screens))
         opensOnLastScreen = defaults.bool(Key.opensOnLastScreen, default: false)
@@ -60,6 +78,9 @@ final class IslandPreferences {
     private enum Key {
         static let openMode = "island.openMode"
         static let hoverDelay = "island.hoverDelay"
+        static let matchesNotch = "island.matchesNotch"
+        static let customWidth = "island.customWidth"
+        static let customHeight = "island.customHeight"
         static let showsLiveActivities = "island.showsLiveActivities"
         static let screens = "island.screens"
         static let opensOnLastScreen = "island.opensOnLastScreen"
