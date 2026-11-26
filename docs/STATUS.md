@@ -78,6 +78,13 @@ Seen on a notched MacBook through screenshots on 26 Nov 2026: the open island wi
 General, Screens, Calendar, Pomodoro, Keep Awake and AI Usage panes. Still unchecked: real clicks in Settings, drag
 and drop of screens, the peeks, swiping between screens, and the overshoot headroom by eye.
 
+Motion work after that, from `UI_MOTION.md` (PRs #4 to #7): Reduce Motion (a short fade replaces the spring, screens
+cross-fade); a 280 ms grace before the island closes; content that arrives after the shape and leaves before it
+shrinks; press and hover feedback on buttons, a play/pause symbol swap and glyph transitions beside the notch.
+Rolling digits on the countdowns were tried and removed: they raised CPU from under 1% to 15–37% while a pomodoro
+ran. Scripted clicks on the island work (Start was pressed); hover brightening and the glyph transitions have not been
+seen in motion.
+
 ## Features
 
 ### The island
@@ -201,13 +208,11 @@ Places where the code is most likely to be wrong, to check first on a Mac.
   way `BrowCore` already takes the time.
 - A build check on every push (GitHub Actions has macOS runners), so the "never compiled" problem can't return.
 - Accessibility labels on the icon-only buttons, and VoiceOver in general.
-- Respect Reduce Motion: open without the spring.
 - Localizable text. Everything is English and hard-coded.
 
 **Behaviour**
 
 - Follow the screen the pointer is on, not only the built-in one.
-- A short delay before closing, so brushing past the edge doesn't shut the island.
 - Show how old a usage reading is ("as of 14:02"); numbers are only as fresh as the tool's last reply.
 - Write the Claude Code capture file in one step, so a read can never land on a half-written file. Today a
   half-written file is simply ignored until the next open.
