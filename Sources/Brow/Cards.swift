@@ -427,6 +427,39 @@ private struct CalendarAccessGate<Content: View>: View {
     }
 }
 
+/// Opens a call's link in whatever handles it. It is small to sit in an event row, or the island's usual white
+/// pill when it has the room, as in a peek.
+struct JoinButton: View {
+    let url: URL
+    var isProminent = false
+
+    var body: some View {
+        Button { NSWorkspace.shared.open(url) } label: { Text("Join") }
+            .buttonStyle(JoinButtonStyle(isProminent: isProminent))
+            .help("Join the call")
+            .accessibilityLabel("Join the call")
+    }
+}
+
+private struct JoinButtonStyle: ButtonStyle {
+    let isProminent: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        if isProminent {
+            PillButtonStyle(isPrimary: true).makeBody(configuration: configuration)
+        } else {
+            configuration.label
+                .font(Typeface.number(10, weight: .bold))
+                .foregroundStyle(.black)
+                .padding(.horizontal, 10)
+                .frame(height: 19)
+                .background(Palette.teal.opacity(configuration.isPressed ? 0.7 : 1), in: Capsule())
+                .contentShape(Capsule())
+                .modifier(PressFeedback(isPressed: configuration.isPressed, litByHover: false))
+        }
+    }
+}
+
 /// One event: its calendar's color, its title and time, and how soon it starts if it is next.
 private struct EventRow: View {
     let event: CalendarModel.Event
@@ -462,6 +495,10 @@ private struct EventRow: View {
                 Text(when(at: now))
                     .font(Typeface.text(11))
                     .foregroundStyle(Palette.secondary)
+            }
+            if let url = event.meetingURL, !event.isAllDay,
+               MeetingLink.isJoinable(start: event.start, end: event.end, at: now) {
+                JoinButton(url: url)
             }
         }
         .monospacedDigit()
