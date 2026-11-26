@@ -64,6 +64,24 @@ final class IslandPreferences {
         didSet { defaults.set(lastScreen, forKey: Key.lastScreen) }
     }
 
+    /// The displays the island is turned off on, by their stable identity. A display not listed shows it, so a
+    /// newly connected one does too.
+    var hiddenDisplays: Set<String> {
+        didSet { defaults.set(hiddenDisplays.sorted(), forKey: Key.hiddenDisplays) }
+    }
+
+    func showsIsland(onDisplay id: String) -> Bool {
+        !hiddenDisplays.contains(id)
+    }
+
+    func setShowsIsland(_ shows: Bool, onDisplay id: String) {
+        if shows {
+            hiddenDisplays.remove(id)
+        } else {
+            hiddenDisplays.insert(id)
+        }
+    }
+
     @ObservationIgnored private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
@@ -79,6 +97,7 @@ final class IslandPreferences {
         screens = IslandScreens.decode(defaults.data(forKey: Key.screens))
         opensOnLastScreen = defaults.bool(Key.opensOnLastScreen, default: false)
         lastScreen = defaults.integer(forKey: Key.lastScreen)
+        hiddenDisplays = Set(defaults.stringArray(forKey: Key.hiddenDisplays) ?? [])
     }
 
     private enum Key {
@@ -92,6 +111,7 @@ final class IslandPreferences {
         static let screens = "island.screens"
         static let opensOnLastScreen = "island.opensOnLastScreen"
         static let lastScreen = "island.lastScreen"
+        static let hiddenDisplays = "island.hiddenDisplays"
     }
 }
 

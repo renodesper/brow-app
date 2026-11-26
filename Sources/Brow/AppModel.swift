@@ -3,11 +3,11 @@ import BrowCore
 import Observation
 import SwiftUI
 
-/// Everything the island shows, in one place. Each part is observable on its own, so a view redraws only for
-/// the part it reads.
+/// Everything the island shows, in one place, shared by the island on every display. Each part is observable on
+/// its own, so a view redraws only for the part it reads.
 @MainActor
+@Observable
 final class AppModel {
-    let island: IslandState
     let preferences: IslandPreferences
     let keepAwake: KeepAwake
     let pomodoro: PomodoroModel
@@ -16,18 +16,15 @@ final class AppModel {
     /// The key combination that opens Settings from anywhere, as text, or nil when it could not be registered.
     var settingsShortcut: String?
 
+    /// The notch's own size on this Mac (or the size the island takes on a display without one), for Settings.
+    var detectedNotch = CGSize(width: 180, height: 32)
+
     init() {
-        island = IslandState()
         preferences = IslandPreferences()
         keepAwake = KeepAwake()
         pomodoro = PomodoroModel()
         usage = UsageModel()
         calendar = CalendarModel()
-    }
-
-    var mode: IslandMode {
-        if island.isOpen { return .open }
-        return island.peek == nil ? .closed : .peek
     }
 
     /// What rests beside the notch while the island is closed, as the owner's settings allow.
@@ -40,17 +37,41 @@ final class AppModel {
 
     var hasCompactContent: Bool { compact.glyphs > 0 }
 
+}
+
+/// One display's island: the shared model, plus the state that belongs to this display alone (whether its island
+/// is open, what it peeks, which screen it shows, how far a swipe has dragged it). Everything else reads through
+/// to the shared model, so each display shows the same timers, events and settings.
+@MainActor
+@dynamicMemberLookup
+final class DisplayContext {
+    let app: AppModel
+    let island = IslandState()
+
+    init(app: AppModel) {
+        self.app = app
+    }
+
+    subscript<Value>(dynamicMember keyPath: KeyPath<AppModel, Value>) -> Value {
+        app[keyPath: keyPath]
+    }
+
+    var mode: IslandMode {
+        if island.isOpen { return .open }
+        return island.peek == nil ? .closed : .peek
+    }
+
     /// The screen the open island shows. There is always at least one.
     var currentScreen: IslandScreen {
-        let screens = preferences.screens
+        let screens = app.preferences.screens
         guard !screens.isEmpty else { return IslandScreens.defaults[0] }
         return screens[min(max(island.screenIndex, 0), screens.count - 1)]
     }
 
     /// The island's size right now, shoulders included. The window and the drawing both take it from here.
     var islandSize: CGSize {
-        IslandLayout.size(mode: mode, notch: island.notch, glyphs: compact.glyphs,
-                          layout: currentScreen.layout, hasDots: preferences.screens.count > 1, peek: island.peek,
+        IslandLayout.size(mode: mode, notch: island.notch, glyphs: app.compact.glyphs,
+                          layout: currentScreen.layout, hasDots: app.preferences.screens.count > 1, peek: island.peek,
                           anticipating: island.isAnticipating)
     }
 }

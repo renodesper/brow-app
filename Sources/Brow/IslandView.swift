@@ -12,7 +12,7 @@ struct IslandActions {
 /// banner while it peeks, and one screen of cards while open. Views are a pure function of the models; the only
 /// animations are the change of size and the slide from one screen to the next.
 struct IslandView: View {
-    let model: AppModel
+    let model: DisplayContext
     let actions: IslandActions
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -142,7 +142,7 @@ private extension Color {
 /// What rests beside the notch while the island is closed: what is going on to the left of the camera, and
 /// the time that matters most to the right.
 private struct CompactIsland: View {
-    let model: AppModel
+    let model: DisplayContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -195,7 +195,7 @@ private struct CompactIsland: View {
 
 /// The open island: the date beside the camera, one screen of cards, and dots for the other screens.
 private struct OpenIsland: View {
-    let model: AppModel
+    let model: DisplayContext
     let actions: IslandActions
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -253,7 +253,7 @@ private struct OpenIsland: View {
 /// One screen's cards, in its layout's rows.
 private struct ScreenView: View {
     let screen: IslandScreen
-    let model: AppModel
+    let model: DisplayContext
 
     var body: some View {
         let layout = screen.layout
@@ -273,7 +273,7 @@ private struct ScreenView: View {
 
 private struct WidgetCard: View {
     let widget: BrowCore.Widget
-    let model: AppModel
+    let model: DisplayContext
     let isWide: Bool
 
     var body: some View {
@@ -297,7 +297,7 @@ private struct WidgetCard: View {
 /// The island opening a little by itself: an event starting, or a pomodoro phase ending.
 private struct PeekView: View {
     let peek: Peek
-    let model: AppModel
+    let model: DisplayContext
     let actions: IslandActions
 
     var body: some View {

@@ -19,7 +19,7 @@ enum BrowApp {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var model: AppModel!
-    private var island: IslandController!
+    private var displays: IslandDisplays!
     private var menu: IslandMenu!
     private var settings: SettingsWindowController!
     private var settingsShortcut: GlobalShortcut?
@@ -30,7 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings = SettingsWindowController(model: model)
         // No Dock icon and no menu bar icon: a right-click on the island is the way to Settings and Quit.
         menu = IslandMenu(model: model, openSettings: { [weak self] in self?.settings.show() })
-        island = IslandController(model: model, makeMenu: { [weak self] in self?.menu.make() ?? NSMenu() })
+        displays = IslandDisplays(app: model, makeMenu: { [weak self] in self?.menu.make() ?? NSMenu() })
 
         // With no Dock icon and no menu bar icon, the island can be out of reach (hidden behind a full-screen app,
         // say). This shortcut always gets to Settings. It is left out of the Settings text if another app has it.
@@ -44,7 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if model.preferences.showsLaunchHello {
             Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .milliseconds(600))
-                self?.island.showPeek(.hello, for: .seconds(2.5))
+                self?.displays.showPeek(.hello, for: .seconds(2.5))
             }
         }
 
@@ -52,12 +52,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return }
             let pomodoro = self.model.pomodoro
             if pomodoro.soundName != "None" { NSSound(named: pomodoro.soundName)?.play() }
-            if pomodoro.peeksOnPhaseEnd { self.island.showPeek(.phaseFinished(phase)) }
+            if pomodoro.peeksOnPhaseEnd { self.displays.showPeek(.phaseFinished(phase)) }
         }
         // An event starting opens the island for a moment, without a sound.
         model.calendar.onEventStarted = { [weak self] event in
             guard let self, self.model.calendar.peeksOnStart else { return }
-            self.island.showPeek(.eventStarted(event))
+            self.displays.showPeek(.eventStarted(event))
         }
     }
 
