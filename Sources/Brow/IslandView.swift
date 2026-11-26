@@ -160,7 +160,9 @@ private struct CompactIsland: View {
                         .transition(glyphTransition)
                 }
                 if let event = compact.event {
-                    CalendarGlyph(color: event.color, size: 19)
+                    Image(systemName: "calendar")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(event.color)
                         .transition(glyphTransition)
                 }
                 if compact.keepAwake {
