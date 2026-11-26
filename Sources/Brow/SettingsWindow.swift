@@ -226,6 +226,9 @@ private struct GeneralPane: View {
                     .disabled(isOn && shown.count <= 1)
                 }
             }
+            ToggleRow(title: "Always show on displays without a notch",
+                      detail: "A small pill marks where to point when nothing is running. Without it the island only appears while something is.",
+                      isOn: $preferences.showsPillWithoutNotch)
         } header: {
             Text("Show on displays")
         } footer: {

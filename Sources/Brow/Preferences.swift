@@ -64,6 +64,11 @@ final class IslandPreferences {
         didSet { defaults.set(lastScreen, forKey: Key.lastScreen) }
     }
 
+    /// Whether a display without a notch keeps a small pill at the top while nothing runs, as something to point at.
+    var showsPillWithoutNotch: Bool {
+        didSet { defaults.set(showsPillWithoutNotch, forKey: Key.showsPillWithoutNotch) }
+    }
+
     /// The displays the island is turned off on, by their stable identity. A display not listed shows it, so a
     /// newly connected one does too.
     var hiddenDisplays: Set<String> {
@@ -98,6 +103,7 @@ final class IslandPreferences {
         opensOnLastScreen = defaults.bool(Key.opensOnLastScreen, default: false)
         lastScreen = defaults.integer(forKey: Key.lastScreen)
         hiddenDisplays = Set(defaults.stringArray(forKey: Key.hiddenDisplays) ?? [])
+        showsPillWithoutNotch = defaults.bool(Key.showsPillWithoutNotch, default: true)
     }
 
     private enum Key {
@@ -112,6 +118,7 @@ final class IslandPreferences {
         static let opensOnLastScreen = "island.opensOnLastScreen"
         static let lastScreen = "island.lastScreen"
         static let hiddenDisplays = "island.hiddenDisplays"
+        static let showsPillWithoutNotch = "island.showsPillWithoutNotch"
     }
 }
 

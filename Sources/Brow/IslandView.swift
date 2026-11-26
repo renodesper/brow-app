@@ -37,8 +37,10 @@ struct IslandView: View {
         let shoulder = IslandLayout.shoulder(for: mode)
         let shape = IslandShape(shoulder: shoulder, bottomRadius: IslandLayout.bottomRadius(for: mode))
         // On a screen without a notch there is nothing to blend into, so the island hides while it has
-        // nothing to show.
-        let isVisible = island.hasPhysicalNotch || mode != .closed || model.hasCompactContent
+        // nothing to show, unless the owner wants a small pill there to point at.
+        let isIdlePill = !island.hasPhysicalNotch && mode == .closed && !model.hasCompactContent
+            && model.preferences.showsPillWithoutNotch
+        let isVisible = island.hasPhysicalNotch || mode != .closed || model.hasCompactContent || isIdlePill
 
         ZStack(alignment: .top) {
             switch mode {
