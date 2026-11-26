@@ -88,8 +88,11 @@ final class IslandState {
     var dragOffset: CGFloat = 0
     /// Whether fingers are on the trackpad moving the screen: it follows them with no animation of its own.
     var isDragging = false
-    /// The notch's size, or a notch-sized area on a screen without one.
+    /// The closed island's size: the notch's own, or the custom size the owner chose. A notch-sized area on a
+    /// screen without one.
     var notch = CGSize(width: 180, height: 32)
+    /// The notch's own size, whatever the custom size is.
+    var detectedNotch = CGSize(width: 180, height: 32)
     var hasPhysicalNotch = true
     /// Whether the pointer rests on the closed island, which then grows a little: it is about to open, or can be
     /// clicked open.

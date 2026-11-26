@@ -229,6 +229,10 @@ final class IslandController {
     private func followSize() {
         withObservationTracking {
             _ = model.islandSize
+            // The custom size changes the island's size by way of the layout, so the layout is watched too.
+            _ = model.preferences.matchesNotch
+            _ = model.preferences.customWidth
+            _ = model.preferences.customHeight
         } onChange: { [weak self] in
             Task { @MainActor in
                 self?.layout()
@@ -243,7 +247,14 @@ final class IslandController {
         let notch = Self.notchRect(on: screen)
         let state = model.island
         // Whole, even sizes, so half of every width is a whole point and all frames share one center.
-        let notchSize = CGSize(width: (notch.width / 2).rounded(.up) * 2, height: notch.height.rounded(.up))
+        let detectedSize = CGSize(width: (notch.width / 2).rounded(.up) * 2, height: notch.height.rounded(.up))
+        if state.detectedNotch != detectedSize { state.detectedNotch = detectedSize }
+        let preferences = model.preferences
+        let resolved = NotchSizing.resolved(detectedWidth: Double(detectedSize.width),
+                                            detectedHeight: Double(detectedSize.height),
+                                            customWidth: preferences.matchesNotch ? nil : preferences.customWidth,
+                                            customHeight: preferences.matchesNotch ? nil : preferences.customHeight)
+        let notchSize = CGSize(width: resolved.width, height: resolved.height)
         if state.notch != notchSize { state.notch = notchSize }
         let hasPhysicalNotch = screen.safeAreaInsets.top > 0
         if state.hasPhysicalNotch != hasPhysicalNotch { state.hasPhysicalNotch = hasPhysicalNotch }
