@@ -156,8 +156,10 @@ that opens the pull request), but it is not needed for one app.
 
 ### Things to tell people
 
-- Brow changes `statusLine` in `~/.claude/settings.json` when AI Usage for Claude Code is on, and puts it back when it
-  is turned off. `brew uninstall` cannot do that for you, so turn it off in Settings → AI Usage before uninstalling
-  (a backup is next to the file as `settings.json.brow-backup`). Say so in the README.
+- Brow wraps `statusLine` in `~/.claude/settings.json` when AI Usage for Claude Code is on, and puts it back when it is
+  turned off. Uninstalling the app does not break the status line (the wrapper is a `tee` that fails quietly when its
+  folder is gone), but it leaves the wrapper behind, and `brew uninstall` cannot take it out. To leave nothing behind,
+  turn it off in Settings → AI Usage first (the README has a "Removing Brow" section for this). A later improvement
+  would be a `Brow --disconnect-claude` flag that a cask `uninstall` step runs, once the cask exists.
 - "Open at login" is a login item the app registers itself. `brew uninstall` removes the app, and macOS then drops
   the login item.

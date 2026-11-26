@@ -54,8 +54,15 @@ is `make dmg`; one that other people can open without a warning, signed with a D
 
 Download `Brow-<version>.dmg` from the releases page, open it and drag Brow onto Applications. Until releases are
 notarized, macOS warns that the developer cannot be verified: open Brow once, then System Settings → Privacy &
-Security → "Open Anyway". Calendar access is asked again after each update for the same reason. If you turned on AI
-Usage for Claude Code, turn it off in Settings before deleting the app, so your status line is put back.
+Security → "Open Anyway". Calendar access is asked again after each update for the same reason.
+
+## Removing Brow
+
+Deleting the app is enough, and it does not break anything. If you turned on AI Usage for Claude Code, a small
+wrapper stays in the `statusLine` of `~/.claude/settings.json`: Claude Code's status line keeps working as before, since
+the wrapper does not need Brow. It only keeps writing a small file into `~/Library/Application Support/Brow` while that
+folder exists. To remove both, turn AI Usage for Claude Code off in Brow's Settings **before** deleting the app: your
+own status line is put back exactly as it was (a backup sits beside the file as `settings.json.brow-backup`).
 
 ## How it stays small and quiet
 
@@ -100,10 +107,10 @@ To add a feature: write an `@Observable` model, add it to `AppModel`, add a case
 - **Codex** writes its limits into its session logs under `~/.codex/sessions`. The island reads the end of the
   newest log. Nothing to set up; numbers are as fresh as your last Codex reply.
 - **Claude Code** pipes a JSON report, limits included, into its status-line command. Turning on
-  **Connect** under Settings → AI Usage changes that command in `~/.claude/settings.json` to
+  **Claude Code** under Settings → AI Usage changes that command in `~/.claude/settings.json` to
   `tee <file> | ( your own command )`, so the island gets a copy and your status line looks as it did.
   The original file is kept beside it as `settings.json.brow-backup`, and turning the setting off puts
-  your command back (**Remove Hook**). Limits appear after the next reply in a Claude Code session, and only on a subscription plan.
+  your command back. Limits appear after the next reply in a Claude Code session, and only on a subscription plan.
 
 ## Not built
 
