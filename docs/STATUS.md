@@ -153,8 +153,10 @@ The next three timed events today and tomorrow, from the calendars macOS already
   waits for the next moment an event should appear, start or leave (`Agenda.nextChange`).
 - Code: `BrowCore/Agenda.swift`, `CalendarModel.swift`, `CalendarCard` in `Cards.swift`.
 
-Progress: written, 7 unit tests for the timing. Reading events through EventKit is untested. Not built: a Join
-button for video-call links, "time to leave", reminders. Since v0.2.0 all-day events, the choice of calendars and
+Progress: written, 7 unit tests for the timing and 11 for finding meeting links. Reading events through EventKit is
+untested. A Join button shows on an event whose URL, location or notes hold a Zoom, Google Meet, Microsoft Teams or
+Webex link, from 10 minutes before the start until the end, on the calendar rows and the event peek. Not built:
+"time to leave", reminders. Since v0.2.0 all-day events, the choice of calendars and
 the lead time (5/10/15/30 min) are in Settings.
 
 ### Settings
@@ -169,7 +171,6 @@ Ordered roughly by how useful each seems.
 | Feature | Notes |
 |---|---|
 | Usage warnings at 80% and 95% | Needs readings while the island is closed, so a file watcher or a socket: the cost is some idle work |
-| Join button for video calls | Find a Zoom, Meet or Teams link in the event and open it; small and self-contained |
 | Hiding over full-screen apps | The known way uses a private macOS API, which this project avoids so far |
 | Time to leave | Needs location permission and a route lookup over the network |
 | More AI tools | Antigravity reports usage through its `agy` command; others vary |

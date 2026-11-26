@@ -21,6 +21,8 @@ final class CalendarModel {
         let color: Color
         let calendarTitle: String
         let isAllDay: Bool
+        /// The link that joins the call, if the event's URL, location or notes hold one.
+        let meetingURL: URL?
     }
 
     /// A calendar the owner can include or leave out.
@@ -163,7 +165,8 @@ final class CalendarModel {
                     Event(id: "\(event.eventIdentifier ?? "")@\(event.startDate.timeIntervalSince1970)",
                           title: event.title ?? "Untitled", start: event.startDate, end: event.endDate,
                           color: Color(nsColor: event.calendar.color), calendarTitle: event.calendar.title,
-                          isAllDay: event.isAllDay)
+                          isAllDay: event.isAllDay,
+                          meetingURL: MeetingLink.find(in: [event.url?.absoluteString, event.location, event.notes]))
                 }
         }
         events = Array(upcoming.prefix(Self.maxEvents))

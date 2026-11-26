@@ -11,6 +11,7 @@ one screen of cards; swipe left or right with two fingers to see the others. Fou
 - **AI Usage**: how much of your Claude Code and Codex limits you've used and when they start over.
 - **Calendar**: your next events today and tomorrow, from the calendars macOS already knows. An event shows beside
   the notch from 15 minutes before it starts ("in 12m", then "Now"), and the island opens for a moment as it starts.
+  A Join button appears on events with a Zoom, Google Meet, Microsoft Teams or Webex link.
 
 **Right-click the island** for Keep Awake, Pomodoro, Settings and Quit. There is no Dock icon and no menu bar icon.
 Opening the app again from Finder also shows Settings.
@@ -95,6 +96,5 @@ To add a feature: write an `@Observable` model, add it to `AppModel`, add a case
 
 ## Not built
 
-Usage warnings at a threshold, hiding over full-screen apps, a Join button
-for video calls, and "time to leave" (it needs your location and a route lookup). On a screen without a notch the island still works, at the top
+Usage warnings at a threshold, hiding over full-screen apps, and "time to leave" (it needs your location and a route lookup). On a screen without a notch the island still works, at the top
 center, and takes clicks in a 180 pt wide strip of the menu bar there.

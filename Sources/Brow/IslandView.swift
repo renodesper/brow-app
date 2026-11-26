@@ -316,6 +316,7 @@ private struct PeekView: View {
                         Text("Now")
                     }
                     .font(Typeface.number(18, weight: .bold))
+                    if let url = event.meetingURL { JoinButton(url: url, isProminent: true) }
                 case .phaseFinished(let phase):
                     phaseFinished(phase)
                 }
