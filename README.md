@@ -6,8 +6,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/renodesper/brow/actions/workflows/build.yml"><img src="https://github.com/renodesper/brow/actions/workflows/build.yml/badge.svg" alt="Build and test status"></a>
-  <a href="https://github.com/renodesper/brow/actions/workflows/release.yml"><img src="https://github.com/renodesper/brow/actions/workflows/release.yml/badge.svg" alt="Release workflow status"></a>
+  <a href="https://github.com/renodesper/brow-app/actions/workflows/build.yml"><img src="https://github.com/renodesper/brow-app/actions/workflows/build.yml/badge.svg" alt="Build and test status"></a>
+  <a href="https://github.com/renodesper/brow-app/actions/workflows/release.yml"><img src="https://github.com/renodesper/brow-app/actions/workflows/release.yml/badge.svg" alt="Release workflow status"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-0a84ff?logo=apple&logoColor=white" alt="macOS 14 or later">
   <img src="https://img.shields.io/badge/Swift-SwiftUI%20%2B%20AppKit-f05138?logo=swift&logoColor=white" alt="Swift, SwiftUI and AppKit">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0a84ff" alt="MIT license"></a>
@@ -66,7 +66,7 @@ with two fingers to see the others. When something is running, a little of it st
 
 ## Install
 
-1. Download `Brow-<version>.dmg` from the [releases page](https://github.com/renodesper/brow/releases).
+1. Download `Brow-<version>.dmg` from the [releases page](https://github.com/renodesper/brow-app/releases).
 2. Open it and drag **Brow** onto **Applications**.
 3. Open Brow. It has no Dock icon: look at the notch, or right-click it.
 
