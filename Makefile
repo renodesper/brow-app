@@ -3,6 +3,9 @@ BINARY   := .build/release/Brow
 # "-" is an ad-hoc signature. macOS ties the Calendar permission to the signature, and an ad-hoc one changes
 # with every build, so the permission is asked again after each rebuild. To keep it, sign with your own
 # identity:  make run SIGN_ID="Apple Development: you@example.com (TEAMID)"
+# Or put it once in Makefile.local (not committed):  SIGN_ID := Apple Development: you@example.com (TEAMID)
+# "security find-identity -v -p codesigning" lists the identities on this Mac.
+-include Makefile.local
 SIGN_ID  ?= -
 
 .PHONY: build app run test install clean
