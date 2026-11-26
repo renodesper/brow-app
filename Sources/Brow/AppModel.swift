@@ -106,9 +106,16 @@ enum IslandLayout {
     /// The one spring every change of the island's size or content follows, so the shape and the cards settle
     /// together.
     static let spring = Spring(duration: 0.35, bounce: 0.15)
-    static var animation: Animation { .spring(spring) }
+    /// With Reduce Motion on, the island changes with a short fade instead of the spring.
+    static let reducedDuration = 0.15
+
+    static func animation(reduceMotion: Bool) -> Animation {
+        reduceMotion ? .easeOut(duration: reducedDuration) : .spring(spring)
+    }
     /// How long the spring takes to come to rest. The window must not shrink before then.
-    static var settlingDuration: TimeInterval { spring.settlingDuration }
+    static func settlingDuration(reduceMotion: Bool) -> TimeInterval {
+        reduceMotion ? reducedDuration : spring.settlingDuration
+    }
     /// Room beyond the island at the sides and below it while it animates, so a spring that overshoots is not
     /// cut off by the window. The top has none: the island hangs from the top of the screen.
     static let overshoot: CGFloat = 20
