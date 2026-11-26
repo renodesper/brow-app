@@ -226,10 +226,9 @@ private struct OpenIsland: View {
 
             HStack(alignment: .top, spacing: IslandLayout.screenGap) {
                 ForEach(screens) { each in
-                    // Every screen is cut to the height of the one on show, so a taller neighbour doesn't spill over the dots.
-                    ScreenView(screen: each, model: model)
-                        .frame(width: contentWidth, height: IslandLayout.cardsHeight(for: screen.layout), alignment: .top)
-                        .clipped()
+                    // No clip here: a rectangular clip on a view that is partly out of view drops its card backgrounds
+                    // and leaves the text. The island's own shape cuts off whatever is outside the island.
+                    ScreenView(screen: each, model: model).frame(width: contentWidth)
                 }
             }
             .offset(x: -CGFloat(index) * pitch + island.dragOffset)
