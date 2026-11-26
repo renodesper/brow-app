@@ -1,0 +1,213 @@
+# Brow: features, progress and what's next
+
+Last updated 26 Nov 2026: v0.2.0 (v0.1.0 plus the design changes listed below), first compiled.
+
+## Where the project stands
+
+All four features are written. **It now builds and runs:** on 26 Nov 2026, with Xcode 27.2 (macOS 27 SDK), `swift build`
+and `make run` succeed and all 41 unit tests pass. The only compiler error was a name clash between
+`BrowCore.Widget` and `SwiftUI.Widget`, fixed by qualifying the name. Idle, the running app used about 0% CPU and
+42 MB (one reading, nothing running). Everything about how the island looks and behaves on a real notch is still
+unchecked: see the QA checklist in the Obsidian vault.
+
+The full Xcode app is needed, not only the Command Line Tools: SwiftUI's `@State` is a macro whose plugin ships
+with Xcode, and without it `SettingsWindow.swift` does not compile.
+
+Each feature below is marked on four steps:
+
+| Step | Meaning |
+|---|---|
+| Written | The code exists |
+| Unit tested | Its logic has tests in `Tests/BrowCoreTests` (all 41 pass) |
+| Builds | It has compiled on a Mac |
+| Checked by hand | Someone has used it on a MacBook with a notch |
+
+| Feature | Written | Unit tested | Builds | Checked by hand |
+|---|---|---|---|---|
+| The island (window, hover, open and close) | Yes | No | Yes | No |
+| Pomodoro | Yes | Yes | Yes | No |
+| Keep Awake | Yes | No | Yes | No |
+| AI usage: Codex | Yes | Yes | Yes | No |
+| AI usage: Claude Code | Yes | Yes | Yes | No |
+| Calendar: list of next events | Yes | No | Yes | No |
+| Calendar: event beside the notch | Yes | Yes (timing only) | Yes | No |
+| Settings menu, open at login | Yes | No | Yes | No |
+
+Size: about 3,440 lines of code in 17 files (2,780 in the app, 660 in `BrowCore`), about 410 lines of tests
+(41 test cases).
+
+## 26 Nov 2026: the design, implemented
+
+The UI was redesigned on a Claude Design canvas and then written into the code. It was written on a Linux
+machine with no Swift for macOS, and first compiled later the same day (see above). What changed:
+
+| Change | Where |
+|---|---|
+| The island's top corners flare outward over the menu bar (5 pt closed, 6 pt peeking, 8 pt open) | `IslandShape` in `IslandView.swift`, sizes in `IslandLayout` |
+| The design's colors: amber Pomodoro, pale blue Keep Awake, teal Calendar, cards on #161616 | `Palette` in `IslandView.swift`, `Cards.swift` |
+| Beside the notch: a pomodoro ring, the event's calendar color, the cup; wings widen for several glyphs; the right side shows an event first, then the pomodoro, then Keep Awake's time left | `CompactIsland` |
+| Screens: the open island shows one screen at a time; two-finger swipe or the dots move between them; one, two or four cards per screen; the calendar alone gets a wide card with today's date | `IslandScreens.swift` (tested), `OpenIsland`, `ScreenView`, `CalendarWideCard` |
+| Peeks: an event starting and a phase ending show a short banner instead of the whole island; "Focus done" has Start break and Skip break | `PeekView`, `IslandController.showPeek` |
+| No menu bar icon: right-click the island for Keep Awake, Pomodoro, Settings… and Quit | `IslandMenu.swift`, the right-click monitor in `IslandController` |
+| A Settings window with six panes: General, Screens, Calendar, Pomodoro, Keep Awake, AI Usage | `SettingsWindow.swift` |
+| New settings: open on hover or only on click; a master switch and per-feature switches for beside the notch; event lead 5/10/15/30 min; which calendars; all-day events; rounds until a long break; start breaks and focus automatically, separately; end sound; Keep Awake default length, Mac-only mode, battery cut-off at 10/20/30%; Codex on or off; amber from 80%; reset times | the models, `Preferences.swift` |
+
+Things to check first on a Mac, beyond compiling:
+
+- Right-click and two-finger swipes reach the island while another app is active (they use local event monitors on
+  a non-activating panel).
+- The right-click menu opens and its items work while the app is not active.
+- The island's frame grows before and shrinks after each change of size without clipping (it now follows one
+  observed size instead of an open/closed flag).
+- The Settings window comes to the front from the right-click menu, though the app has no Dock icon.
+- The battery cut-off turns Keep Awake off when unplugged below the level.
+
+Not done from the design: fonts (the design uses Inter and Manrope; the app uses the system font), drag to reorder
+screens (Settings has Move Left and Move Right instead), and the settings' custom look (the panes use macOS's own
+grouped form, tinted navy).
+
+## Features
+
+### The island
+
+A black shape over the notch. Hovering opens it into four cards; moving away closes it. While something is going
+on, it grows a little to each side of the notch: glyphs on the left, one time on the right.
+
+- One window, whose frame is always the island's own frame, so it never takes a click meant for another app.
+- The pointer is noticed by a tracking area; nothing polls for it.
+- On a screen without a notch, it sits at the top center and hides while it has nothing to show.
+- Code: `IslandController.swift`, `IslandView.swift`, sizes in `AppModel.swift` (`IslandLayout`).
+
+Progress: written. This is the part most likely to need work on a real Mac, see [Known risks](#known-risks).
+
+### Pomodoro
+
+Focus, short break, and a long break after every fourth finished focus round. Start, pause, skip, start over.
+Defaults are 25, 5 and 15 minutes; the menu offers other lengths and whether the next phase starts by itself.
+
+- The phase glyph and the time left show beside the notch while it runs.
+- When a phase ends, a sound plays and the island opens for a few seconds.
+- The cycle is a plain value (`Pomodoro` in `BrowCore`) that is handed the time rather than reading the clock.
+  A running phase is stored as its end date, so it stays right across sleep.
+- One sleeping task waits for the end of the phase. The display redraws once a second, only while on screen.
+- Code: `BrowCore/Pomodoro.swift`, `PomodoroModel.swift`, `PomodoroCard` in `Cards.swift`.
+
+Progress: written, 10 unit tests. Not built: daily counts or history, custom lengths beyond the menu's presets, a
+choice of sound, keeping a running phase across a relaunch.
+
+### Keep Awake
+
+Keeps the display on, and with it the Mac awake, for 30 minutes, 1 hour, 2 hours or until turned off. A cup shows
+beside the notch while it is on, with the time it ends.
+
+- One power assertion from macOS; nothing else runs while it is on. macOS drops it if the app quits.
+- Code: `KeepAwake.swift`, `KeepAwakeCard` in `Cards.swift`.
+
+Progress: written, no tests (it is a thin wrapper around one system call). Not built: staying on across a relaunch. Since v0.2.0
+the battery cut-off, the Mac-only mode and a default length are in Settings.
+
+### AI usage
+
+How much of each limit is used and when it starts over, for Claude Code and Codex. Read when the island opens;
+no login token is read and no network request is made.
+
+- **Codex:** the end of the newest session log under `~/.codex/sessions`. Nothing to set up.
+- **Claude Code:** needs "Show Claude Code Usage" turned on in the menu. That rewrites the status-line command in
+  `~/.claude/settings.json` to `tee <file> | ( your own command )`, keeps the original file as
+  `settings.json.brow-backup`, and puts your command back when turned off.
+- A window that has started over since it was read shows as empty rather than as its old number.
+- Code: `BrowCore/Usage.swift`, `BrowCore/StatusLineHook.swift`, `UsageModel.swift`, `UsageCard` in `Cards.swift`.
+
+Progress: written, 14 unit tests (parsing, finding the newest log, and the settings edit with its undo). The
+`tee` command itself was run in a shell and passes input through unchanged, also when its folder is missing.
+Not built: warnings as a limit nears, other tools (Antigravity, Cursor, Copilot), token or cost figures, showing
+how old a reading is.
+
+### Calendar
+
+The next three timed events today and tomorrow, from the calendars macOS already has (iCloud, Google, Exchange).
+
+- An event shows beside the notch from 15 minutes before it starts ("in 12m", then "Now"), the island opens for
+  a moment as it starts, and it leaves 5 minutes later or when it ends. Can be turned off in the menu.
+- Events are read when the island opens, a calendar changes, the day changes or the Mac wakes. One sleeping task
+  waits for the next moment an event should appear, start or leave (`Agenda.nextChange`).
+- Code: `BrowCore/Agenda.swift`, `CalendarModel.swift`, `CalendarCard` in `Cards.swift`.
+
+Progress: written, 7 unit tests for the timing. Reading events through EventKit is untested. Not built: a Join
+button for video-call links, "time to leave", reminders. Since v0.2.0 all-day events, the choice of calendars and
+the lead time (5/10/15/30 min) are in Settings.
+
+### Settings
+
+A Settings window with six panes, opened from the right-click menu or by opening the app again. The right-click
+menu itself holds only Keep Awake, Pomodoro, Settings… and Quit.
+
+## Not yet implemented
+
+Ordered roughly by how useful each seems.
+
+| Feature | Notes |
+|---|---|
+| Usage warnings at 80% and 95% | Needs readings while the island is closed, so a file watcher or a socket: the cost is some idle work |
+| Join button for video calls | Find a Zoom, Meet or Teams link in the event and open it; small and self-contained |
+| Hiding over full-screen apps | The known way uses a private macOS API, which this project avoids so far |
+| Keep state across a relaunch | A running pomodoro phase and Keep Awake are lost when the app restarts |
+| Time to leave | Needs location permission and a route lookup over the network |
+| More AI tools | Antigravity reports usage through its `agy` command; others vary |
+| App icon, signing, notarization | The app is ad-hoc signed; see the README on the Calendar permission |
+| Other notch-app staples | Now Playing, volume and brightness HUDs, battery, file shelf: all out of scope so far |
+
+## Known risks
+
+Places where the code is most likely to be wrong, to check first on a Mac.
+
+1. **Hover.** The window resizes under the pointer as the island opens. A missed "pointer left" event would leave
+   the island open until the pointer passes over it again.
+2. **Opening animation.** The window grows before the island animates and shrinks after. If the two get out of
+   step, the island will look clipped or jump.
+3. **Clicks.** The window never becomes the active window, by design. Buttons should still respond to the first
+   click, but this is unconfirmed.
+4. **Card layout.** Sizes are fixed numbers chosen without seeing them. Four usage rows, or a 12-hour clock, may
+   not fit.
+5. **Sound during sleep.** A pomodoro phase that ends while the lid is closed may play its sound into a sleeping
+   Mac instead of waiting for it to wake.
+6. **File formats.** The Claude Code and Codex formats are read as other tools document them, not as checked
+   against real files on this Mac. A change in either shows as "no limits found", not as wrong numbers.
+7. **`settings.json` key order.** Turning Claude Code usage on rewrites the file with keys sorted alphabetically.
+   Content is kept; order and spacing are not.
+
+## What we can improve
+
+**Before anything else**
+
+- Put the folder under git (it has no commits yet), so changes from here on can be undone.
+- Go through the risks above on a real notch.
+
+**Quality**
+
+- Tests for the app layer: `PomodoroModel` and `CalendarModel` could take a clock and a fake event source, the
+  way `BrowCore` already takes the time.
+- A build check on every push (GitHub Actions has macOS runners), so the "never compiled" problem can't return.
+- Accessibility labels on the icon-only buttons, and VoiceOver in general.
+- Respect Reduce Motion: open without the spring.
+- Localizable text. Everything is English and hard-coded.
+
+**Behaviour**
+
+- Follow the screen the pointer is on, not only the built-in one.
+- A short delay before closing, so brushing past the edge doesn't shut the island.
+- Show how old a usage reading is ("as of 14:02"); numbers are only as fresh as the tool's last reply.
+- Write the Claude Code capture file in one step, so a read can never land on a half-written file. Today a
+  half-written file is simply ignored until the next open.
+- On a screen without a notch, the hidden island still takes clicks in a 180 pt strip of the menu bar.
+
+**Efficiency**
+
+- Measure before changing anything: memory and CPU, idle and with a pomodoro running. The design aims for no work
+  while idle, but that is a claim until measured.
+- The once-a-second countdown is the only steady cost. It could tick once a minute beside the notch and once a
+  second only in the open island.
+
+## Related notes
+
+- [`../README.md`](../README.md): building, running, and where the code is.

@@ -1,0 +1,277 @@
+import AppKit
+import BrowCore
+import Observation
+import SwiftUI
+
+/// Owns the island's window: where it sits, how large it is, and how the pointer opens, closes, swipes and
+/// right-clicks it.
+///
+/// One panel does everything. Its frame is the island's own frame, so it never takes a click meant for the menu
+/// bar or the app below. It grows as soon as the island needs more room and shrinks only once the island has
+/// finished shrinking, and the drawing hangs from the top center of the frame, so nothing moves on screen as the
+/// frame changes.
+@MainActor
+final class IslandController {
+    private let model: AppModel
+    private let panel: IslandPanel
+    /// Builds the right-click menu as it opens, so it always matches what is going on.
+    private let makeMenu: () -> NSMenu
+    private var pendingOpen: Task<Void, Never>?
+    private var pendingShrink: Task<Void, Never>?
+    private var pendingPeekEnd: Task<Void, Never>?
+    private var screenObserver: NSObjectProtocol?
+    private var eventMonitors: [Any] = []
+    private var swipe = SwipeTracker()
+
+    init(model: AppModel, makeMenu: @escaping () -> NSMenu) {
+        self.model = model
+        self.makeMenu = makeMenu
+        panel = IslandPanel()
+
+        let hover = HoverView()
+        panel.contentView = hover
+        let host = NSHostingView(rootView: IslandView(model: model, actions: IslandActions(
+            open: {}, showScreen: { _ in }, endPeek: {})))
+        // The panel's size is set here, never by SwiftUI's layout.
+        host.sizingOptions = []
+        host.frame = hover.bounds
+        host.autoresizingMask = [.width, .height]
+        hover.addSubview(host)
+
+        // Now that self is whole, the views get actions that reach it.
+        host.rootView = IslandView(model: model, actions: IslandActions(
+            open: { [weak self] in self?.setOpen(true) },
+            showScreen: { [weak self] index in self?.showScreen(index) },
+            endPeek: { [weak self] in self?.endPeek(after: .zero) }))
+        hover.onHover = { [weak self] isInside in self?.pointerMoved(inside: isInside) }
+
+        screenObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.layout() }
+        }
+        installEventMonitors()
+        layout()
+        followSize()
+        panel.orderFrontRegardless()
+    }
+
+    /// Opens the island a little to show that something happened, like an event starting.
+    func showPeek(_ peek: Peek, for duration: Duration = .seconds(5)) {
+        // The open island shows it all already.
+        guard !model.island.isOpen else { return }
+        model.island.peek = peek
+        endPeek(after: duration)
+    }
+
+    func showScreen(_ index: Int) {
+        let count = model.preferences.screens.count
+        let target = min(max(index, 0), count - 1)
+        guard target != model.island.screenIndex else { return }
+        model.island.movedForward = target > model.island.screenIndex
+        model.island.screenIndex = target
+        model.preferences.lastScreen = target
+    }
+
+    private var isPointerInside: Bool {
+        // NSMouseInRect counts the top edge as inside: a pointer pushed against the top of the screen sits
+        // exactly on it.
+        NSMouseInRect(NSEvent.mouseLocation, panel.frame, false)
+    }
+
+    private func endPeek(after delay: Duration) {
+        pendingPeekEnd?.cancel()
+        pendingPeekEnd = Task { [weak self] in
+            if delay > .zero { try? await Task.sleep(for: delay) }
+            guard !Task.isCancelled, let self else { return }
+            // A peek under the pointer stays until the pointer leaves, unless a button in it ended it.
+            if delay > .zero, self.isPointerInside { return }
+            self.model.island.peek = nil
+        }
+    }
+
+    private func pointerMoved(inside: Bool) {
+        if inside {
+            if model.island.peek != nil {
+                // The pointer holds a peek open, so its buttons can be reached.
+                pendingPeekEnd?.cancel()
+                return
+            }
+            guard model.preferences.openMode == .hover else { return }
+            // A short wait, so a pointer only passing through on its way elsewhere doesn't open the island.
+            pendingOpen?.cancel()
+            pendingOpen = Task { [weak self] in
+                try? await Task.sleep(for: .milliseconds(120))
+                guard !Task.isCancelled else { return }
+                self?.setOpen(true)
+            }
+        } else if !isPointerInside {
+            // Checked against the frame itself, since resizing the panel under the pointer can report an exit
+            // that never happened.
+            pendingOpen?.cancel()
+            if model.island.peek != nil { endPeek(after: .seconds(1)) }
+            setOpen(false)
+        }
+    }
+
+    private func setOpen(_ open: Bool) {
+        guard model.island.isOpen != open else { return }
+        if open {
+            pendingPeekEnd?.cancel()
+            model.island.peek = nil
+            let preferences = model.preferences
+            let screen = preferences.opensOnLastScreen ? preferences.lastScreen : 0
+            model.island.screenIndex = min(max(screen, 0), preferences.screens.count - 1)
+            // Read as it opens, so what it shows is current without anything polling in between.
+            model.usage.refresh()
+            model.calendar.refresh()
+        }
+        model.island.isOpen = open
+    }
+
+    // MARK: Clicks, right-clicks and swipes
+
+    /// Local monitors see the events meant for this app's windows before they are handed out, also while
+    /// another app is active. Each one ignores events for any window but the island's.
+    private func installEventMonitors() {
+        eventMonitors.append(NSEvent.addLocalMonitorForEvents(matching: .rightMouseDown) { [weak self] event in
+            guard let self, event.window === self.panel else { return event }
+            self.showMenu(for: event)
+            return nil
+        } as Any)
+        eventMonitors.append(NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            guard let self, event.window === self.panel else { return event }
+            // A click opens the closed island. Once open, or while it peeks, clicks belong to the buttons.
+            if self.model.mode == .closed { self.setOpen(true) }
+            return event
+        } as Any)
+        eventMonitors.append(NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
+            guard let self, event.window === self.panel else { return event }
+            self.scrolled(event)
+            return event
+        } as Any)
+    }
+
+    private func showMenu(for event: NSEvent) {
+        guard let view = panel.contentView else { return }
+        pendingOpen?.cancel()
+        NSMenu.popUpContextMenu(makeMenu(), with: event, for: view)
+    }
+
+    /// A two-finger swipe on the open island moves one screen left or right.
+    private func scrolled(_ event: NSEvent) {
+        guard model.island.isOpen, model.preferences.screens.count > 1,
+              event.momentumPhase.isEmpty else { return }
+        let phase: SwipeTracker.Phase
+        if event.phase.contains(.began) {
+            phase = .began
+        } else if event.phase.contains(.changed) {
+            phase = .changed
+        } else if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
+            phase = .ended
+        } else {
+            // A mouse wheel has no phases; it isn't a swipe.
+            return
+        }
+        // With natural scrolling the deltas already follow the fingers; without it they run the other way.
+        let sign: Double = event.isDirectionInvertedFromDevice ? 1 : -1
+        let step = swipe.add(fingersX: sign * Double(event.scrollingDeltaX),
+                             fingersY: sign * Double(event.scrollingDeltaY), phase: phase)
+        if step != 0 { showScreen(model.island.screenIndex + step) }
+    }
+
+    // MARK: The frame
+
+    /// Fits the panel again whenever the island's size changes: opening, closing, peeking, another screen, or
+    /// something starting or stopping beside the notch.
+    private func followSize() {
+        withObservationTracking {
+            _ = model.islandSize
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                self?.layout()
+                self?.followSize()
+            }
+        }
+    }
+
+    private func layout() {
+        // The built-in screen with the notch if there is one, otherwise the main screen.
+        guard let screen = NSScreen.screens.first(where: { $0.safeAreaInsets.top > 0 }) ?? NSScreen.main else { return }
+        let notch = Self.notchRect(on: screen)
+        let state = model.island
+        // Whole, even sizes, so half of every width is a whole point and all frames share one center.
+        let notchSize = CGSize(width: (notch.width / 2).rounded(.up) * 2, height: notch.height.rounded(.up))
+        if state.notch != notchSize { state.notch = notchSize }
+        let hasPhysicalNotch = screen.safeAreaInsets.top > 0
+        if state.hasPhysicalNotch != hasPhysicalNotch { state.hasPhysicalNotch = hasPhysicalNotch }
+
+        // Grow at once, so the island never draws outside the window; shrink only after the animation.
+        let target = model.islandSize
+        let current = panel.frame.size
+        let grown = CGSize(width: max(current.width, target.width), height: max(current.height, target.height))
+        setFrame(size: grown, notch: notch, screen: screen)
+        pendingShrink?.cancel()
+        guard grown != target else { return }
+        pendingShrink = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(IslandLayout.openDuration + 0.1))
+            guard !Task.isCancelled, let self else { return }
+            self.setFrame(size: self.model.islandSize, notch: notch, screen: screen)
+        }
+    }
+
+    private func setFrame(size: CGSize, notch: CGRect, screen: NSScreen) {
+        let frame = CGRect(x: (notch.midX - size.width / 2).rounded(.down), y: screen.frame.maxY - size.height,
+                           width: size.width, height: size.height)
+        if panel.frame != frame { panel.setFrame(frame, display: true) }
+    }
+
+    /// The notch in screen coordinates: what lies between the two menu bar areas beside the camera. On a screen
+    /// without a notch, a notch-sized area at the top center.
+    private static func notchRect(on screen: NSScreen) -> CGRect {
+        let frame = screen.frame
+        let inset = screen.safeAreaInsets.top
+        if inset > 0, let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea {
+            return CGRect(x: frame.minX + left.width, y: frame.maxY - inset,
+                          width: frame.width - left.width - right.width, height: inset)
+        }
+        let menuBarHeight = max(frame.maxY - screen.visibleFrame.maxY, 24)
+        return CGRect(x: frame.midX - 90, y: frame.maxY - menuBarHeight, width: 180, height: menuBarHeight)
+    }
+}
+
+/// A borderless panel above the menu bar, on every Space, that never takes focus from the app in use.
+private final class IslandPanel: NSPanel {
+    init() {
+        super.init(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        level = .statusBar
+        collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = false
+        isMovable = false
+        hidesOnDeactivate = false
+        // Set explicitly, even to its default: only then does the panel take the pointer across its whole
+        // frame, clear pixels included. Its frame is the island's own, so that is exactly what is wanted.
+        ignoresMouseEvents = false
+        appearance = NSAppearance(named: .darkAqua)
+    }
+
+    override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
+}
+
+/// Reports the pointer entering and leaving, also while another app is active.
+private final class HoverView: NSView {
+    var onHover: ((Bool) -> Void)?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                                       owner: self))
+    }
+
+    override func mouseEntered(with event: NSEvent) { onHover?(true) }
+    override func mouseExited(with event: NSEvent) { onHover?(false) }
+}

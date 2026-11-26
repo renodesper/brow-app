@@ -1,0 +1,145 @@
+import Foundation
+import BrowCore
+import Observation
+
+/// Everything the island shows, in one place. Each part is observable on its own, so a view redraws only for
+/// the part it reads.
+@MainActor
+final class AppModel {
+    let island: IslandState
+    let preferences: IslandPreferences
+    let keepAwake: KeepAwake
+    let pomodoro: PomodoroModel
+    let usage: UsageModel
+    let calendar: CalendarModel
+
+    init() {
+        island = IslandState()
+        preferences = IslandPreferences()
+        keepAwake = KeepAwake()
+        pomodoro = PomodoroModel()
+        usage = UsageModel()
+        calendar = CalendarModel()
+    }
+
+    var mode: IslandMode {
+        if island.isOpen { return .open }
+        return island.peek == nil ? .closed : .peek
+    }
+
+    /// What rests beside the notch while the island is closed, as the owner's settings allow.
+    var compact: CompactContent {
+        guard preferences.showsLiveActivities else { return CompactContent() }
+        return CompactContent(pomodoro: pomodoro.showsBesideNotch && pomodoro.timer.isActive,
+                              event: calendar.near,
+                              keepAwake: keepAwake.showsBesideNotch && keepAwake.isOn)
+    }
+
+    var hasCompactContent: Bool { compact.glyphs > 0 }
+
+    /// The screen the open island shows. There is always at least one.
+    var currentScreen: IslandScreen {
+        let screens = preferences.screens
+        guard !screens.isEmpty else { return IslandScreens.defaults[0] }
+        return screens[min(max(island.screenIndex, 0), screens.count - 1)]
+    }
+
+    /// The island's size right now, shoulders included. The window and the drawing both take it from here.
+    var islandSize: CGSize {
+        IslandLayout.size(mode: mode, notch: island.notch, glyphs: compact.glyphs,
+                          layout: currentScreen.layout, hasDots: preferences.screens.count > 1)
+    }
+}
+
+enum IslandMode: Equatable {
+    case closed, peek, open
+}
+
+/// A moment the island opens a little for by itself.
+enum Peek: Equatable {
+    case eventStarted(CalendarModel.Event)
+    /// The phase that just ended.
+    case phaseFinished(Pomodoro.Phase)
+}
+
+struct CompactContent {
+    var pomodoro = false
+    var event: CalendarModel.Event?
+    var keepAwake = false
+
+    var glyphs: Int { (pomodoro ? 1 : 0) + (event == nil ? 0 : 1) + (keepAwake ? 1 : 0) }
+}
+
+/// What the window and the views need to agree on.
+@MainActor
+@Observable
+final class IslandState {
+    var isOpen = false
+    var peek: Peek?
+    /// Which of the owner's screens the open island shows.
+    var screenIndex = 0
+    /// Whether the last change of screen went forward, for the direction the cards slide in from.
+    var movedForward = true
+    /// The notch's size, or a notch-sized area on a screen without one.
+    var notch = CGSize(width: 180, height: 32)
+    var hasPhysicalNotch = true
+}
+
+/// The island's sizes, in points. The design was drawn at 1.25×, so its pixels are divided by 1.25 here.
+enum IslandLayout {
+    static let openWidth: CGFloat = 624
+    static let peekWidth: CGFloat = 480
+    static let peekContentHeight: CGFloat = 64
+    static let spacing: CGFloat = 10
+    static let padding: CGFloat = 14
+    static let dotsHeight: CGFloat = 22
+    static let openDuration = 0.35
+
+    /// Room on each side of the notch while something is going on; wider when several glyphs share it.
+    static func wing(glyphs: Int) -> CGFloat {
+        switch glyphs {
+        case ...1: 64
+        case 2: 76
+        default: 92
+        }
+    }
+
+    /// The height of one row of cards. A screen with a single card gives it more room.
+    static func rowHeight(for layout: ScreenLayout) -> CGFloat {
+        layout == .one ? 192 : 164
+    }
+
+    /// How far the top corners flare out over the menu bar, like the inside of a rounded corner.
+    static func shoulder(for mode: IslandMode) -> CGFloat {
+        switch mode {
+        case .closed: 5
+        case .peek: 6
+        case .open: 8
+        }
+    }
+
+    static func bottomRadius(for mode: IslandMode) -> CGFloat {
+        switch mode {
+        case .closed: 11
+        case .peek: 24
+        case .open: 28
+        }
+    }
+
+    static func size(mode: IslandMode, notch: CGSize, glyphs: Int, layout: ScreenLayout, hasDots: Bool) -> CGSize {
+        let body: CGSize
+        switch mode {
+        case .closed:
+            body = CGSize(width: notch.width + (glyphs > 0 ? 2 * wing(glyphs: glyphs) : 0), height: notch.height)
+        case .peek:
+            body = CGSize(width: max(peekWidth, notch.width + 2 * wing(glyphs: 1)),
+                          height: notch.height + peekContentHeight + padding)
+        case .open:
+            let rows = CGFloat(layout.rows)
+            let cards = rows * rowHeight(for: layout) + (rows - 1) * spacing
+            body = CGSize(width: max(openWidth, notch.width + 2 * wing(glyphs: 3)),
+                          height: notch.height + spacing + cards + (hasDots ? dotsHeight : 4) + padding)
+        }
+        return CGSize(width: body.width + 2 * shoulder(for: mode), height: body.height)
+    }
+}
