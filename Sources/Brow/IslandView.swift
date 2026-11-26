@@ -234,8 +234,8 @@ private struct OpenIsland: View {
                         Button { actions.showScreen(dot) } label: {
                             Capsule()
                                 .fill(dot == index ? Color.white : Color.white.opacity(0.32))
-                                .frame(width: dot == index ? 14 : 5, height: 5)
-                                .frame(width: 24, height: IslandLayout.dotsHeight)
+                                .frame(width: dot == index ? 12 : 6, height: 6)
+                                .frame(width: 16, height: IslandLayout.dotsHeight)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
