@@ -84,6 +84,59 @@ final class PomodoroTests: XCTestCase {
         XCTAssertEqual(pomodoro, Pomodoro(settings: settings))
     }
 
+    func testASavedStateSurvivesJSON() throws {
+        var pomodoro = Pomodoro(settings: settings)
+        pomodoro.start(at: start)
+        _ = pomodoro.finishIfDue(at: pomodoro.endDate!, autoStartNext: false)
+        pomodoro.start(at: start)
+        let states = [Pomodoro(settings: settings).state, pomodoro.state]
+        for state in states {
+            let decoded = try JSONDecoder().decode(Pomodoro.State.self, from: JSONEncoder().encode(state))
+            XCTAssertEqual(decoded, state)
+        }
+    }
+
+    func testARunningPhaseCarriesOnAfterARelaunch() {
+        var before = Pomodoro(settings: settings)
+        before.start(at: start)
+        var after = Pomodoro(settings: settings)
+        after.restore(before.state, at: start.addingTimeInterval(600))
+        XCTAssertTrue(after.isRunning)
+        XCTAssertEqual(after.endDate, before.endDate)
+        XCTAssertEqual(after.remaining(at: start.addingTimeInterval(600)), 900)
+    }
+
+    func testAPausedPhaseKeepsItsTimeAfterARelaunch() {
+        var before = Pomodoro(settings: settings)
+        before.start(at: start)
+        before.pause(at: start.addingTimeInterval(500))
+        var after = Pomodoro(settings: settings)
+        after.restore(before.state, at: start.addingTimeInterval(99_999))
+        XCTAssertFalse(after.isRunning)
+        XCTAssertEqual(after.remaining(at: start.addingTimeInterval(99_999)), 1000)
+    }
+
+    func testAPhaseThatEndedWhileClosedIsFinishedButNotStartedAgain() {
+        var before = Pomodoro(settings: settings)
+        before.start(at: start)
+        var after = Pomodoro(settings: settings)
+        after.restore(before.state, at: start.addingTimeInterval(5000))
+        // Focus ran out: it counts, the short break is next, and it waits to be started.
+        XCTAssertEqual(after.phase, .shortBreak)
+        XCTAssertEqual(after.completedFocusRounds, 1)
+        XCTAssertFalse(after.isActive)
+    }
+
+    func testAWaitingPhaseIsRestoredWhereItStood() {
+        var before = Pomodoro(settings: settings)
+        before.start(at: start)
+        _ = before.finishIfDue(at: before.endDate!, autoStartNext: false)
+        var after = Pomodoro(settings: settings)
+        after.restore(before.state, at: start.addingTimeInterval(99_999))
+        XCTAssertEqual(after.state, before.state)
+        XCTAssertEqual(after.phase, .shortBreak)
+    }
+
     func testClockTextRoundsUp() {
         XCTAssertEqual(Pomodoro.clockText(1500), "25:00")
         XCTAssertEqual(Pomodoro.clockText(1499.2), "25:00")

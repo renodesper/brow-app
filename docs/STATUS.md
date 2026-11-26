@@ -111,8 +111,9 @@ Defaults are 25, 5 and 15 minutes; the menu offers other lengths and whether the
 - One sleeping task waits for the end of the phase. The display redraws once a second, only while on screen.
 - Code: `BrowCore/Pomodoro.swift`, `PomodoroModel.swift`, `PomodoroCard` in `Cards.swift`.
 
-Progress: written, 10 unit tests. Not built: daily counts or history, custom lengths beyond the menu's presets, a
-choice of sound, keeping a running phase across a relaunch.
+Progress: written, 15 unit tests. A running, paused or waiting phase is saved and carries on after a relaunch; one
+that ended while the app was closed is finished quietly (no sound, no peek) and waits to be started. Not built: daily
+counts or history, custom lengths beyond the menu's presets.
 
 ### Keep Awake
 
@@ -122,8 +123,8 @@ beside the notch while it is on, with the time it ends.
 - One power assertion from macOS; nothing else runs while it is on. macOS drops it if the app quits.
 - Code: `KeepAwake.swift`, `KeepAwakeCard` in `Cards.swift`.
 
-Progress: written, no tests (it is a thin wrapper around one system call). Not built: staying on across a relaunch. Since v0.2.0
-the battery cut-off, the Mac-only mode and a default length are in Settings.
+Progress: written, no tests (it is a thin wrapper around one system call). A timed run is saved and turns itself back on for what is left after a relaunch; one without an end
+is not resumed. Since v0.2.0 the battery cut-off, the Mac-only mode and a default length are in Settings.
 
 ### AI usage
 
@@ -170,7 +171,6 @@ Ordered roughly by how useful each seems.
 | Usage warnings at 80% and 95% | Needs readings while the island is closed, so a file watcher or a socket: the cost is some idle work |
 | Join button for video calls | Find a Zoom, Meet or Teams link in the event and open it; small and self-contained |
 | Hiding over full-screen apps | The known way uses a private macOS API, which this project avoids so far |
-| Keep state across a relaunch | A running pomodoro phase and Keep Awake are lost when the app restarts |
 | Time to leave | Needs location permission and a route lookup over the network |
 | More AI tools | Antigravity reports usage through its `agy` command; others vary |
 | App icon, signing, notarization | The app is ad-hoc signed; see the README on the Calendar permission |

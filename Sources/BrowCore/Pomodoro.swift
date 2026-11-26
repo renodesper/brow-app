@@ -5,7 +5,7 @@ import Foundation
 /// It never reads the clock. Callers pass `now`, and a running phase is stored as the date it ends, so the
 /// countdown stays right across sleep and needs no ticking timer to stay in step.
 public struct Pomodoro: Equatable, Sendable {
-    public enum Phase: String, Equatable, Sendable {
+    public enum Phase: String, Codable, Equatable, Sendable {
         case focus, shortBreak, longBreak
     }
 
@@ -33,11 +33,18 @@ public struct Pomodoro: Equatable, Sendable {
         }
     }
 
-    public enum Run: Equatable, Sendable {
+    public enum Run: Codable, Equatable, Sendable {
         /// Waiting to be started, showing the phase's full length.
         case ready
         case running(until: Date)
         case paused(remaining: TimeInterval)
+    }
+
+    /// Where the cycle is and whether it runs: what has to be saved to carry on after the app is closed.
+    public struct State: Codable, Equatable, Sendable {
+        public var phase: Phase
+        public var run: Run
+        public var completedFocusRounds: Int
     }
 
     public var settings: Settings
@@ -48,6 +55,19 @@ public struct Pomodoro: Equatable, Sendable {
 
     public init(settings: Settings = Settings()) {
         self.settings = settings
+    }
+
+    public var state: State {
+        State(phase: phase, run: run, completedFocusRounds: completedFocusRounds)
+    }
+
+    /// Carries on from a saved state. A running phase whose end has passed while the app was closed is finished
+    /// and left waiting at the start of the next one: it is not started again, since nobody is there for it.
+    public mutating func restore(_ state: State, at now: Date) {
+        phase = state.phase
+        run = state.run
+        completedFocusRounds = max(state.completedFocusRounds, 0)
+        _ = finishIfDue(at: now, autoStartNext: false)
     }
 
     /// False only while it waits at the start of a phase: then there is nothing worth showing beside the notch.

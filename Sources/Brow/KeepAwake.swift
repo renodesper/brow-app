@@ -89,11 +89,13 @@ final class KeepAwake {
                                                                  queue: .main) { [weak self] _ in
             Task { @MainActor in self?.checkBattery() }
         }
+        resumeIfTimed()
     }
 
     func start(_ preset: Preset) {
         start(for: preset.duration)
         presetID = preset.id
+        if until != nil { defaults.set(preset.id, forKey: Key.resumePreset) }
     }
 
     func start(for duration: TimeInterval?) {
@@ -104,6 +106,8 @@ final class KeepAwake {
         checkBattery()
         guard isOn, let duration else { return }
         until = Date().addingTimeInterval(duration)
+        // Remembered, so a relaunch before it ends can pick it up again. One that never ends is not.
+        defaults.set(until, forKey: Key.resumeUntil)
         // One sleeping task for the whole duration. Its clock keeps counting while the Mac sleeps (after the
         // lid was closed, say), so it ends on time rather than late.
         expiry = Task { [weak self] in
@@ -121,7 +125,21 @@ final class KeepAwake {
         isOn = false
         until = nil
         presetID = nil
+        defaults.removeObject(forKey: Key.resumeUntil)
+        defaults.removeObject(forKey: Key.resumePreset)
         watchBattery()
+    }
+
+    /// Turns itself back on, for what is left of it, if the app was closed during a timed run.
+    private func resumeIfTimed() {
+        guard let end = defaults.object(forKey: Key.resumeUntil) as? Date, end.timeIntervalSinceNow > 0 else {
+            defaults.removeObject(forKey: Key.resumeUntil)
+            defaults.removeObject(forKey: Key.resumePreset)
+            return
+        }
+        let saved = defaults.string(forKey: Key.resumePreset)
+        start(for: end.timeIntervalSinceNow)
+        if isOn { presetID = saved }
     }
 
     /// Takes the power assertion, replacing the one held, so a change of what stays awake applies at once.
@@ -157,6 +175,8 @@ final class KeepAwake {
         static let batteryCutoffEnabled = "keepAwake.batteryCutoffEnabled"
         static let batteryCutoffLevel = "keepAwake.batteryCutoffLevel"
         static let showsBesideNotch = "keepAwake.showsBesideNotch"
+        static let resumeUntil = "keepAwake.resumeUntil"
+        static let resumePreset = "keepAwake.resumePreset"
     }
 }
 
