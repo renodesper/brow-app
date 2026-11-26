@@ -29,6 +29,8 @@ final class IslandController {
     private var screenObserver: NSObjectProtocol?
     private var eventMonitors: [Any] = []
     private var swipe = SwipeTracker()
+    /// Whether the swipe in progress has already gone far enough to change screen, so the tap is felt once.
+    private var passedCommit = false
 
     init(model: DisplayContext, displayID: String, makeMenu: @escaping () -> NSMenu) {
         self.model = model
@@ -89,7 +91,6 @@ final class IslandController {
         let count = model.preferences.screens.count
         let target = min(max(index, 0), count - 1)
         guard target != model.island.screenIndex else { return }
-        model.island.movedForward = target > model.island.screenIndex
         model.island.screenIndex = target
         model.preferences.lastScreen = target
     }
@@ -225,13 +226,21 @@ final class IslandController {
         case .drag(let offset):
             model.island.isDragging = true
             model.island.dragOffset = offset
+            // A tap on the trackpad the moment the swipe has gone far enough to change screen on letting go.
+            let isPastCommit = swipe.wouldCommit(canGoNext: index < model.preferences.screens.count - 1,
+                                                 canGoPrevious: index > 0, width: Double(model.islandSize.width))
+            if isPastCommit, !passedCommit {
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+            }
+            passedCommit = isPastCommit
         case .commit(let step):
-            // The screen changes and the offset returns to rest together: the old one keeps going from where the
-            // fingers left it, and the new one arrives from the side.
+            // The strip of screens slides on from where the fingers left it, to the new screen.
+            passedCommit = false
             model.island.isDragging = false
             showScreen(index + step)
             model.island.dragOffset = 0
         case .cancel:
+            passedCommit = false
             model.island.isDragging = false
             model.island.dragOffset = 0
         }

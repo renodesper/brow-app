@@ -76,6 +76,15 @@ final class IslandScreensTests: XCTestCase {
         XCTAssertEqual(swipe([(100, 0, 0.5), (60, 0, 1.5)]).last, .commit(-1))
     }
 
+    func testASwipeKnowsWhenLettingGoWouldMoveAScreen() {
+        var tracker = SwipeTracker()
+        _ = tracker.add(fingersX: -20, fingersY: 0, phase: .began, time: 0)
+        XCTAssertFalse(tracker.wouldCommit(width: 600), "20 pt of 600 is far too short")
+        _ = tracker.add(fingersX: -140, fingersY: 0, phase: .changed, time: 2)
+        XCTAssertTrue(tracker.wouldCommit(width: 600), "160 pt is past a quarter of 600")
+        XCTAssertFalse(tracker.wouldCommit(canGoNext: false, width: 600), "there is no screen to go to")
+    }
+
     func testReleasingAShortSlowSwipeSpringsBack() {
         XCTAssertEqual(swipe([(-40, 0, 0.5), (-20, 0, 1.5)]).last, .cancel)
     }

@@ -105,8 +105,6 @@ final class IslandState {
     var peek: Peek?
     /// Which of the owner's screens the open island shows.
     var screenIndex = 0
-    /// Whether the last change of screen went forward, for the direction the cards slide in from.
-    var movedForward = true
     /// How far the current screen has been dragged from rest by a swipe in progress, in points.
     var dragOffset: CGFloat = 0
     /// Whether fingers are on the trackpad moving the screen: it follows them with no animation of its own.
@@ -134,6 +132,8 @@ enum IslandLayout {
     }
     static let peekContentHeight: CGFloat = 64
     static let spacing: CGFloat = 10
+    /// The margin between the island's edge and its cards.
+    static let sideMargin: CGFloat = 12
     static let padding: CGFloat = 14
     /// The page dots' row, from the cards to the island's bottom edge: the dots sit in the middle of it.
     static let dotsHeight: CGFloat = 28
@@ -165,6 +165,16 @@ enum IslandLayout {
         case 2: 76
         default: 92
         }
+    }
+
+    /// The gap between neighbouring screens while they slide: wider than the island's side margin, so the next
+    /// screen is out of sight until a swipe brings it in.
+    static let screenGap: CGFloat = 16
+
+    /// The height of one screen's cards, all its rows.
+    static func cardsHeight(for layout: ScreenLayout) -> CGFloat {
+        let rows = CGFloat(layout.rows)
+        return rows * rowHeight(for: layout) + (rows - 1) * spacing
     }
 
     /// The height of one row of cards. A screen with a single card gives it more room.
@@ -204,8 +214,7 @@ enum IslandLayout {
             body = CGSize(width: max(peekWidth(for: peek), notch.width + 2 * wing(glyphs: 1)),
                           height: notch.height + peekContentHeight + padding)
         case .open:
-            let rows = CGFloat(layout.rows)
-            let cards = rows * rowHeight(for: layout) + (rows - 1) * spacing
+            let cards = cardsHeight(for: layout)
             body = CGSize(width: max(openWidth, notch.width + 2 * wing(glyphs: 3)),
                           height: notch.height + spacing + cards + (hasDots ? dotsHeight : 4 + padding))
         }
