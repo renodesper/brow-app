@@ -46,6 +46,9 @@ security find-identity -v -p codesigning
 make run SIGN_ID="Apple Development: you@example.com (TEAMID)"
 ```
 
+To keep the identity out of your commands, put `SIGN_ID := …` once in `Makefile.local` (not committed). A build that
+other people can open, signed with a Developer ID and notarized, is `make release`; see `docs/RELEASING.md`.
+
 ## How it stays small and quiet
 
 - **Nothing polls.** The pointer is noticed by a tracking area. Usage files are read when the island opens. A
