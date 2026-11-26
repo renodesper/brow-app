@@ -91,6 +91,9 @@ been granted to the app on the Mac this was built on, so the grouping was checke
 
 Every control the design draws is now built.
 
+Brow has no Dock or menu bar icon, so launching used to show nothing. It now opens the island for about 2.5 s with "Brow
+is running" and a hint on how to open it. Settings > General > Startup has a switch to turn that off.
+
 Seen on a notched MacBook through screenshots on 26 Nov 2026: the open island with the new fonts and header, and the
 General, Screens, Calendar, Pomodoro, Keep Awake and AI Usage panes. Still unchecked: real clicks in Settings, drag
 and drop of screens, the peeks, swiping between screens, and the overshoot headroom by eye.
@@ -224,8 +227,6 @@ Places where the code is most likely to be wrong, to check first on a Mac.
 
 - Tests for the app layer: `PomodoroModel` and `CalendarModel` could take a clock and a fake event source, the
   way `BrowCore` already takes the time.
-- Watch the first GitHub Actions run (`.github/workflows/build.yml`, `swift test` and a release build on `macos-latest`):
-  it has not run yet, and the runner's Xcode may be older than the one the code was built with.
 - Accessibility labels on the icon-only buttons, and VoiceOver in general.
 - Localizable text. Everything is English and hard-coded.
 

@@ -39,6 +39,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         if settingsShortcut != nil { model.settingsShortcut = "⌃⌥⌘," }
 
+        // No Dock icon and no menu bar icon, so launching shows nothing: a short hello says the app is running. It
+        // waits a moment so the island has settled in its place first.
+        if model.preferences.showsLaunchHello {
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .milliseconds(600))
+                self?.island.showPeek(.hello, for: .seconds(2.5))
+            }
+        }
+
         model.pomodoro.onPhaseFinished = { [weak self] phase in
             guard let self else { return }
             let pomodoro = self.model.pomodoro

@@ -103,6 +103,9 @@ private struct GeneralPane: View {
                 CheckRow(title: "Open Brow at login", isOn: Binding(
                     get: { opensAtLogin },
                     set: { setOpensAtLogin($0) }))
+                CheckRow(title: "Say hello when Brow starts",
+                         detail: "The island opens for a moment, since Brow has no Dock or menu bar icon to show that it started.",
+                         isOn: $preferences.showsLaunchHello)
                 if let loginError {
                     Text(loginError).font(SettingsStyle.caption).foregroundStyle(.red)
                 }

@@ -64,6 +64,8 @@ enum Peek: Equatable {
     case eventStarted(CalendarModel.Event)
     /// The phase that just ended.
     case phaseFinished(Pomodoro.Phase)
+    /// A hello as the app starts: with no Dock or menu bar icon, it is the one sign that it is running.
+    case hello
 }
 
 struct CompactContent {
@@ -108,7 +110,7 @@ enum IslandLayout {
     static func peekWidth(for peek: Peek?) -> CGFloat {
         switch peek {
         case .phaseFinished: 512
-        case .eventStarted, nil: 448
+        case .eventStarted, .hello, nil: 448
         }
     }
     static let peekContentHeight: CGFloat = 64
