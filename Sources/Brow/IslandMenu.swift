@@ -42,7 +42,7 @@ final class IslandMenu: NSObject {
         }
         submenu.addItem(item("Off", #selector(turnKeepAwakeOff), checked: !keepAwake.isOn))
         submenu.addItem(.separator())
-        for (index, preset) in KeepAwake.presets.enumerated() {
+        for (index, preset) in keepAwake.islandPresets.enumerated() {
             let option = item(preset.title, #selector(startKeepAwake(_:)),
                               checked: keepAwake.isOn && keepAwake.presetID == preset.id)
             option.tag = index
@@ -97,8 +97,9 @@ final class IslandMenu: NSObject {
     }
 
     @objc private func startKeepAwake(_ sender: NSMenuItem) {
-        guard KeepAwake.presets.indices.contains(sender.tag) else { return }
-        model.keepAwake.start(KeepAwake.presets[sender.tag])
+        let presets = model.keepAwake.islandPresets
+        guard presets.indices.contains(sender.tag) else { return }
+        model.keepAwake.start(presets[sender.tag])
     }
 
     @objc private func togglePomodoro() {

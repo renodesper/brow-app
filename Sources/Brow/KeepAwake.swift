@@ -17,16 +17,27 @@ final class KeepAwake {
         let label: String
         /// For menus and settings.
         let title: String
+        /// Spelled out, for the Settings buttons.
+        let settingsLabel: String
         /// nil is until it is turned off.
         let duration: TimeInterval?
     }
 
-    static let presets = [
-        Preset(id: "30m", label: "30m", title: "For 30 Minutes", duration: 30 * 60),
-        Preset(id: "1h", label: "1h", title: "For 1 Hour", duration: 60 * 60),
-        Preset(id: "2h", label: "2h", title: "For 2 Hours", duration: 2 * 60 * 60),
-        Preset(id: "none", label: "No end", title: "Until Turned Off", duration: nil),
+    /// Every length the default can be, shortest first.
+    static let choices = [
+        Preset(id: "5m", label: "5m", title: "For 5 Minutes", settingsLabel: "5 min", duration: 5 * 60),
+        Preset(id: "10m", label: "10m", title: "For 10 Minutes", settingsLabel: "10 min", duration: 10 * 60),
+        Preset(id: "15m", label: "15m", title: "For 15 Minutes", settingsLabel: "15 min", duration: 15 * 60),
+        Preset(id: "30m", label: "30m", title: "For 30 Minutes", settingsLabel: "30 min", duration: 30 * 60),
+        Preset(id: "1h", label: "1h", title: "For 1 Hour", settingsLabel: "1 hour", duration: 60 * 60),
+        Preset(id: "2h", label: "2h", title: "For 2 Hours", settingsLabel: "2 hours", duration: 2 * 60 * 60),
+        Preset(id: "3h", label: "3h", title: "For 3 Hours", settingsLabel: "3 hours", duration: 3 * 60 * 60),
+        Preset(id: "5h", label: "5h", title: "For 5 Hours", settingsLabel: "5 hours", duration: 5 * 60 * 60),
+        Preset(id: "none", label: "No end", title: "Until Turned Off", settingsLabel: "Indefinitely", duration: nil),
     ]
+
+    /// The four the island's card and menu always offer.
+    static let presets = choices.filter { ["30m", "1h", "2h", "none"].contains($0.id) }
 
     static let batteryLevels = [10, 20, 30]
 
@@ -66,6 +77,12 @@ final class KeepAwake {
 
     var showsBesideNotch: Bool {
         didSet { defaults.set(showsBesideNotch, forKey: Key.showsBesideNotch) }
+    }
+
+    /// What the island's card and menu offer: the four usual lengths, and the default too when it is another one,
+    /// so the outlined default is always there to pick.
+    var islandPresets: [Preset] {
+        Self.choices.filter { preset in Self.presets.contains { $0.id == preset.id } || preset.id == defaultPresetID }
     }
 
     var defaultPreset: Preset {

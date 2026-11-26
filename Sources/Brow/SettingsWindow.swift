@@ -577,17 +577,25 @@ private struct PomodoroPane: View {
 private struct KeepAwakePane: View {
     @Bindable var keepAwake: KeepAwake
 
+    private func defaultChoice(_ preset: KeepAwake.Preset) -> some View {
+        PillChoice(title: preset.settingsLabel, isSelected: keepAwake.defaultPresetID == preset.id) {
+            keepAwake.defaultPresetID = preset.id
+        }
+    }
+
     var body: some View {
         SettingsPage(title: "Keep Awake") {
             SettingsSection(title: "Default length",
                             detail: "Outlined on the island’s Keep Awake card as the one to pick without thinking.") {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: min(KeepAwake.presets.count, 4)),
-                          spacing: 8) {
-                    ForEach(KeepAwake.presets) { preset in
-                        PillChoice(title: preset.label == "No end" ? "Until turned off" : preset.label,
-                                   isSelected: keepAwake.defaultPresetID == preset.id) {
-                            keepAwake.defaultPresetID = preset.id
-                        }
+                // Five across, then the rest, with the last one ("Indefinitely") twice as wide, as the design draws it.
+                let choices = KeepAwake.choices
+                Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+                    GridRow {
+                        ForEach(choices.prefix(5)) { defaultChoice($0) }
+                    }
+                    GridRow {
+                        ForEach(choices.dropFirst(5).dropLast()) { defaultChoice($0) }
+                        defaultChoice(choices[choices.count - 1]).gridCellColumns(2)
                     }
                 }
             }
