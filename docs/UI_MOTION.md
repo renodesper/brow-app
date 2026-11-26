@@ -20,7 +20,9 @@ second and is acceptable. Measured on a notched MacBook with a pomodoro running,
 island did not help. It is out until a cheaper way is found (for example a single cross-fade of the whole time, not
 per-digit rolling).
 
-Not built: the interactive swipe and shared-card morph (step 4), card stagger, the click-mode hover lift, scroll to
+- The interactive swipe (step 4, first half): the screens sit side by side in one strip that follows the fingers, so the next or previous screen slides in as you drag; it springs back or carries on at release; the page dots' white pill slides between dots (`matchedGeometryEffect`); a tap on the trackpad (`NSHapticFeedbackManager` `.alignment`) when the swipe has gone far enough to change screen, decided by `SwipeTracker.wouldCommit` (tested). Reduce Motion changes screen without sliding.
+
+Not built: the shared-card morph (the other half of step 4: Calendar resizing in place between screens), card stagger, the click-mode hover lift, scroll to
 open, haptics, the launch hello, the peek's extra bounce, the slide-down on a screen without a notch, and the
 blur-replace of the right-hand time.
 

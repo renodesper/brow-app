@@ -202,12 +202,17 @@ private struct OpenIsland: View {
     let model: DisplayContext
     let actions: IslandActions
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var dotsSpace
 
     var body: some View {
         let island = model.island
         let screens = model.preferences.screens
         let screen = model.currentScreen
         let index = min(max(island.screenIndex, 0), screens.count - 1)
+        // The screens sit side by side in one strip, each as wide as the cards' area, and the strip slides: with
+        // the fingers during a swipe, then on its own to the screen it lands on.
+        let contentWidth = model.islandSize.width - 2 * IslandLayout.shoulder(for: .open) - 2 * IslandLayout.sideMargin
+        let pitch = contentWidth + IslandLayout.screenGap
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 Text(Date.now, format: .dateTime.weekday(.wide).day().month(.wide))
@@ -219,29 +224,40 @@ private struct OpenIsland: View {
             .padding(.horizontal, 12)
             .frame(height: island.notch.height)
 
-            ScreenView(screen: screen, model: model)
-                .id(screen.id)
-                .transition(reduceMotion ? .opacity : .push(from: island.movedForward ? .trailing : .leading))
-                .padding(.top, IslandLayout.spacing)
-                .padding(.horizontal, 12)
-                // Follows the fingers with no animation of its own; when they lift it springs back or carries on
-                // with the change of screen.
-                .offset(x: island.dragOffset)
-                .animation(island.isDragging ? nil : IslandLayout.animation(reduceMotion: reduceMotion),
-                           value: island.dragOffset)
-                // No clip of its own: the island's shape clips it, and a rectangular clip here made a card dragged
-                // partly out of view lose its background or its bottom.
-                .frame(maxWidth: .infinity)
+            HStack(alignment: .top, spacing: IslandLayout.screenGap) {
+                ForEach(screens) { each in
+                    // Every screen is cut to the height of the one on show, so a taller neighbour doesn't spill over the dots.
+                    ScreenView(screen: each, model: model)
+                        .frame(width: contentWidth, height: IslandLayout.cardsHeight(for: screen.layout), alignment: .top)
+                        .clipped()
+                }
+            }
+            .offset(x: -CGFloat(index) * pitch + island.dragOffset)
+            // Follows the fingers with no animation of its own; when they lift it springs back or carries on to
+            // the screen it landed on. With Reduce Motion it just changes screen.
+            .animation(island.isDragging || reduceMotion ? nil : IslandLayout.animation(reduceMotion: false),
+                       value: island.dragOffset)
+            .animation(reduceMotion ? nil : IslandLayout.animation(reduceMotion: false), value: island.screenIndex)
+            .frame(width: contentWidth, height: IslandLayout.cardsHeight(for: screen.layout), alignment: .topLeading)
+            .padding(.top, IslandLayout.spacing)
+            // No clip of its own: the island's shape clips it, and a rectangular clip here made a card dragged
+            // partly out of view lose its background or its bottom.
+            .frame(maxWidth: .infinity)
 
             if screens.count > 1 {
                 HStack(spacing: 0) {
                     ForEach(screens.indices, id: \.self) { dot in
                         Button { actions.showScreen(dot) } label: {
-                            Capsule()
-                                .fill(dot == index ? Color.white : Color.white.opacity(0.32))
-                                .frame(width: dot == index ? 12 : 6, height: 6)
-                                .frame(width: 16, height: IslandLayout.dotsHeight)
-                                .contentShape(Rectangle())
+                            ZStack {
+                                Circle().fill(Color.white.opacity(0.32)).frame(width: 6, height: 6)
+                                // One white pill that slides from dot to dot.
+                                if dot == index {
+                                    Capsule().fill(Color.white).frame(width: 12, height: 6)
+                                        .matchedGeometryEffect(id: "current", in: dotsSpace)
+                                }
+                            }
+                            .frame(width: 16, height: IslandLayout.dotsHeight)
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Screen \(dot + 1): \(screens[dot].title)")

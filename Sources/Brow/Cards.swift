@@ -329,7 +329,7 @@ struct CalendarCard: View {
             }
         } content: {
             CalendarAccessGate(calendar: calendar, empty: "Nothing else today or tomorrow.") {
-                VStack(spacing: 8) {
+                VStack(spacing: 4) {
                     ForEach(Array(calendar.events.prefix(3))) { event in
                         EventRow(event: event, isNext: event.id == calendar.events.first?.id, showsTime: false)
                     }

@@ -205,12 +205,20 @@ public struct SwipeTracker: Sendable {
             defer { reset() }
             guard axis == .horizontal else { return .none }
             let step = horizontal < 0 ? 1 : -1
-            guard step == 1 ? canGoNext : canGoPrevious else { return .cancel }
-            let farEnough = abs(horizontal) >= Self.commitFraction * width
-            let flicked = abs(velocity) >= Self.flickSpeed && abs(horizontal) >= Self.flickDistance
-                && (velocity < 0) == (horizontal < 0)
-            return farEnough || flicked ? .commit(step) : .cancel
+            return wouldCommit(canGoNext: canGoNext, canGoPrevious: canGoPrevious, width: width)
+                ? .commit(step) : .cancel
         }
+    }
+
+    /// Whether letting go right now would move a screen: far enough, or a quick flick toward a screen that exists.
+    /// Used to tell the fingers, with a tap on the trackpad, that they have gone far enough.
+    public func wouldCommit(canGoNext: Bool = true, canGoPrevious: Bool = true, width: Double = 600) -> Bool {
+        guard axis == .horizontal else { return false }
+        guard horizontal < 0 ? canGoNext : canGoPrevious else { return false }
+        let farEnough = abs(horizontal) >= Self.commitFraction * width
+        let flicked = abs(velocity) >= Self.flickSpeed && abs(horizontal) >= Self.flickDistance
+            && (velocity < 0) == (horizontal < 0)
+        return farEnough || flicked
     }
 
     private mutating func reset() {
