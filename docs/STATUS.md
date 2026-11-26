@@ -224,7 +224,8 @@ Places where the code is most likely to be wrong, to check first on a Mac.
 
 - Tests for the app layer: `PomodoroModel` and `CalendarModel` could take a clock and a fake event source, the
   way `BrowCore` already takes the time.
-- A build check on every push (GitHub Actions has macOS runners), so the "never compiled" problem can't return.
+- Watch the first GitHub Actions run (`.github/workflows/build.yml`, `swift test` and a release build on `macos-latest`):
+  it has not run yet, and the runner's Xcode may be older than the one the code was built with.
 - Accessibility labels on the icon-only buttons, and VoiceOver in general.
 - Localizable text. Everything is English and hard-coded.
 
