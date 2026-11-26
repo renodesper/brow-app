@@ -127,6 +127,18 @@ private struct ToggleRow: View {
     }
 }
 
+/// A small coloured dot before a status word, like "Allowed".
+private struct StatusDotStyle: LabelStyle {
+    let color: Color
+
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 5) {
+            configuration.icon.font(.system(size: 7)).foregroundStyle(color)
+            configuration.title
+        }
+    }
+}
+
 /// A whole number with a unit after it and a stepper beside it.
 private struct StepperRow: View {
     let title: String
@@ -216,10 +228,10 @@ private struct GeneralPane: View {
         let detected = island.detectedNotch
         return Section {
             Picker("Size", selection: $preferences.matchesNotch) {
-                Text("Match the notch").tag(true)
-                Text("Custom size").tag(false)
+                Text("Match Notch").tag(true)
+                Text("Custom").tag(false)
             }
-            .pickerStyle(.radioGroup)
+            .pickerStyle(.segmented)
             sizeSlider("Width", value: $preferences.customWidth, notch: Double(detected.width),
                        extra: NotchSizing.extraWidth)
                 .disabled(preferences.matchesNotch)
@@ -490,14 +502,21 @@ private struct CalendarPane: View {
             Section {
                 LabeledContent("Calendar access") {
                     HStack(spacing: 10) {
-                        Text(accessText).foregroundStyle(calendar.access == .granted ? Color.green : Color.secondary)
-                        if calendar.access == .notAsked {
-                            Button("Allow Access…") { Task { await calendar.requestAccess() } }
-                        } else {
+                        switch calendar.access {
+                        case .granted:
+                            Label("Allowed", systemImage: "circle.fill")
+                                .labelStyle(StatusDotStyle(color: .green))
+                        case .denied:
+                            Text("Not allowed").foregroundStyle(.secondary)
                             Button("Open Privacy Settings") { openPrivacySettings() }
+                        case .notAsked:
+                            Text("Not asked yet").foregroundStyle(.secondary)
+                            Button("Allow Access…") { Task { await calendar.requestAccess() } }
                         }
                     }
                 }
+            } footer: {
+                Text("Change it in System Settings › Privacy & Security › Calendars.")
             }
             Section("Beside the notch") {
                 ToggleRow(title: "Show upcoming events beside the notch",
@@ -533,14 +552,6 @@ private struct CalendarPane: View {
             }
         }
         .onAppear { calendar.loadCalendars() }
-    }
-
-    private var accessText: String {
-        switch calendar.access {
-        case .granted: "Allowed"
-        case .denied: "Not allowed"
-        case .notAsked: "Not asked yet"
-        }
     }
 
     private func openPrivacySettings() {
@@ -651,21 +662,14 @@ private struct KeepAwakePane: View {
             } footer: {
                 Text("Outlined on the island’s Keep Awake card as the one to pick without thinking.")
             }
-            Section("What stays awake") {
-                Picker("What stays awake", selection: $keepAwake.keepsDisplayOn) {
-                    Text("The Mac and the display").tag(true)
-                    Text("The Mac only").tag(false)
-                }
-                .pickerStyle(.radioGroup)
-                .labelsHidden()
-                if !keepAwake.keepsDisplayOn {
-                    Text("The display may sleep; downloads and builds keep running.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
+            Section {
+                ToggleRow(title: "Keep the display on",
+                          detail: "When off, the Mac stays awake but the display may sleep.",
+                          isOn: $keepAwake.keepsDisplayOn)
             }
             Section {
-                ToggleRow(title: "Turn off when the battery drops below", isOn: $keepAwake.batteryCutoffEnabled)
-                Picker("Battery level", selection: $keepAwake.batteryCutoffLevel) {
+                ToggleRow(title: "Turn off on low battery", isOn: $keepAwake.batteryCutoffEnabled)
+                Picker("Below", selection: $keepAwake.batteryCutoffLevel) {
                     ForEach(KeepAwake.batteryLevels, id: \.self) { Text("\($0)%").tag($0) }
                 }
                 .pickerStyle(.menu)
@@ -694,7 +698,7 @@ private struct UsagePane: View {
             Section {
                 source(name: "Claude Code",
                        isOn: Binding(get: { claudeConnected }, set: { _ in toggleClaude() }),
-                       badge: claudeConnected ? connectedText : "Not connected", badgeIsGood: claudeConnected,
+                       isConnected: claudeConnected,
                        detail: "Shows your 5-hour and 7-day limits, read from Claude Code’s status line. Your own status line keeps working.",
                        note: "Turning this off puts your status line back exactly as it was.")
                 if let claudeError {
@@ -702,7 +706,7 @@ private struct UsagePane: View {
                 }
                 source(name: "Codex",
                        isOn: $usage.readsCodex,
-                       badge: usage.readsCodex ? connectedText : "Off", badgeIsGood: usage.readsCodex,
+                       isConnected: usage.readsCodex,
                        detail: "Shows your 5-hour and weekly limits, read from Codex’s newest local session log. Nothing to set up.",
                        note: nil)
             } header: {
@@ -718,17 +722,23 @@ private struct UsagePane: View {
         .onAppear { claudeConnected = usage.isClaudeConnected }
     }
 
-    private var connectedText: String {
-        guard let lastRead = usage.lastRead else { return "Connected" }
-        return "Connected · read \(lastRead.formatted(date: .omitted, time: .shortened))"
+    /// "Updated 09:48" once something has been read; the dot's accessibility label is "Connected".
+    private var updatedText: String {
+        guard let lastRead = usage.lastRead else { return "Waiting for data" }
+        return "Updated \(lastRead.formatted(date: .omitted, time: .shortened))"
     }
 
-    private func source(name: String, isOn: Binding<Bool>, badge: String, badgeIsGood: Bool, detail: String,
+    private func source(name: String, isOn: Binding<Bool>, isConnected: Bool, detail: String,
                         note: String?) -> some View {
         Toggle(isOn: isOn) {
             HStack(spacing: 8) {
                 Text(name)
-                Text(badge).font(.caption).foregroundStyle(badgeIsGood ? Color.green : Color.secondary)
+                if isConnected {
+                    Label(updatedText, systemImage: "circle.fill")
+                        .labelStyle(StatusDotStyle(color: .green))
+                        .font(.caption).foregroundStyle(.secondary)
+                        .accessibilityLabel("Connected. \(updatedText)")
+                }
             }
             Text(detail).font(.caption).foregroundStyle(.secondary)
             if let note {
