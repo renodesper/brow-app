@@ -1,8 +1,8 @@
 import BrowCore
 import SwiftUI
 
-/// The frame every feature's card shares: a glyph and an uppercase title, something on the right of it, and the
-/// card's content below.
+/// The frame every feature's card shares: a glyph and a sentence-case title in the feature's colour, something on
+/// the right of it, and the card's content below.
 private struct Card<Accessory: View, Content: View>: View {
     private let title: String
     private let symbol: String
@@ -25,21 +25,20 @@ private struct Card<Accessory: View, Content: View>: View {
                 Image(systemName: symbol)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(tint)
-                Text(title.uppercased())
-                    .font(Typeface.text(10, weight: .semibold))
-                    .tracking(0.6)
-                    .foregroundStyle(Palette.secondary)
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(tint)
                 Spacer(minLength: 4)
                 accessory
             }
-            .frame(height: 20)
+            .frame(height: 22)
             content
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 14)
         .padding(.vertical, 13)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: 19, style: .continuous))
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -49,38 +48,45 @@ extension Card where Accessory == EmptyView {
     }
 }
 
-/// A capsule button: white for the main action, a faint fill otherwise. Its fill is its hit area.
+/// A capsule button: solid for the main action (white, or `tint`), a faint fill otherwise, or `tint` at a low
+/// strength when `isTinted`. Its fill is its hit area.
 struct PillButtonStyle: ButtonStyle {
     var isPrimary = false
-    var isSelected = false
+    var isTinted = false
+    /// The feature's colour: the solid fill of a primary button, the colour of a tinted one (cyan if not given).
+    var tint: Color?
+    var height: CGFloat = 28
     /// Whether it stretches to share a row equally with its neighbours.
     var fillsWidth = false
 
     func makeBody(configuration: Configuration) -> some View {
-        let fill: Color = isPrimary ? .white : isSelected ? Palette.paleBlue : Palette.track
-        let text: Color = isPrimary ? .black : isSelected ? Palette.navy : .white
+        let accent = tint ?? Palette.cyan
+        let fill: Color = isPrimary ? tint ?? .white : isTinted ? accent.opacity(0.22) : Palette.track
+        let text: Color = isPrimary ? .black : isTinted ? accent : .white
         configuration.label
-            .font(Typeface.text(12, weight: isSelected ? .bold : .semibold))
+            .font(.system(size: height < 28 ? 11 : 12, weight: .semibold))
             .foregroundStyle(text)
             .lineLimit(1)
             .minimumScaleFactor(0.85)
-            .padding(.horizontal, fillsWidth ? 4 : 13)
+            .padding(.horizontal, fillsWidth ? 4 : height < 28 ? 10 : 13)
             .frame(maxWidth: fillsWidth ? .infinity : nil)
-            .frame(height: 30)
+            .frame(height: height)
             .background(fill.opacity(configuration.isPressed ? 0.7 : 1), in: Capsule())
             .contentShape(Capsule())
             .modifier(PressFeedback(isPressed: configuration.isPressed, litByHover: !isPrimary))
     }
 }
 
-/// A round button holding one glyph.
+/// A round button holding one glyph: neutral, or tinted by its feature.
 private struct IconButtonStyle: ButtonStyle {
+    var tint: Color?
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 12, weight: .bold))
-            .foregroundStyle(.white)
-            .frame(width: 30, height: 30)
-            .background(Palette.track.opacity(configuration.isPressed ? 0.6 : 1), in: Circle())
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(tint ?? .white)
+            .frame(width: 32, height: 32)
+            .background((tint?.opacity(0.22) ?? Palette.track).opacity(configuration.isPressed ? 0.6 : 1), in: Circle())
             .contentShape(Circle())
             .modifier(PressFeedback(isPressed: configuration.isPressed))
     }
@@ -111,7 +117,7 @@ private struct Chip: View {
 
     var body: some View {
         Text(text)
-            .font(Typeface.number(10, weight: .semibold))
+            .font(.system(size: 10, weight: .semibold).monospacedDigit())
             .foregroundStyle(tint)
             .padding(.horizontal, 8)
             .frame(height: 19)
@@ -148,24 +154,22 @@ struct PomodoroCard: View {
         } content: {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Countdown(pomodoro: pomodoro)
-                    .font(Typeface.number(34, weight: .bold))
+                    .font(.system(size: 32, weight: .semibold).monospacedDigit())
                     .monospacedDigit()
                 Text("of \(Pomodoro.clockText(timer.settings.length(of: timer.phase)))")
-                    .font(Typeface.text(11))
+                    .font(.system(size: 11))
                     .foregroundStyle(Palette.secondary)
             }
             PomodoroProgress(pomodoro: pomodoro)
             HStack(spacing: 6) {
                 Button { pomodoro.toggle() } label: {
-                    Label {
-                        Text(pomodoro.actionTitle)
-                    } icon: {
-                        Image(systemName: timer.isRunning ? "pause.fill" : "play.fill")
-                            .contentTransition(.symbolEffect(.replace))
-                    }
+                    Image(systemName: timer.isRunning ? "pause.fill" : "play.fill")
+                        .contentTransition(.symbolEffect(.replace))
                 }
                 .animation(.snappy(duration: 0.2), value: timer.isRunning)
-                .buttonStyle(PillButtonStyle(isPrimary: true))
+                .buttonStyle(IconButtonStyle(tint: tint))
+                .help(pomodoro.actionTitle)
+                .accessibilityLabel(pomodoro.actionTitle)
                 Button { pomodoro.skip() } label: { Image(systemName: "forward.end.fill") }
                     .buttonStyle(IconButtonStyle())
                     .help(pomodoro.skipTitle)
@@ -196,12 +200,10 @@ struct KeepAwakeCard: View {
     let keepAwake: KeepAwake
 
     var body: some View {
-        Card("Keep Awake", symbol: "cup.and.saucer.fill", tint: Palette.paleBlue) {
+        Card("Keep Awake", symbol: "cup.and.saucer.fill", tint: Palette.cyan) {
             if keepAwake.isOn {
-                Button("Turn off") { keepAwake.stop() }
-                    .buttonStyle(.plain)
-                    .font(Typeface.text(12, weight: .semibold))
-                    .foregroundStyle(Palette.paleBlue)
+                Button("Turn Off") { keepAwake.stop() }
+                    .buttonStyle(PillButtonStyle(isTinted: true, height: 22))
             }
         } content: {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -212,10 +214,10 @@ struct KeepAwakeCard: View {
                         Text("Off")
                     }
                 }
-                .font(Typeface.number(34, weight: .bold))
+                .font(.system(size: 32, weight: .semibold).monospacedDigit())
                 .monospacedDigit()
                 Text(detail)
-                    .font(Typeface.text(11))
+                    .font(.system(size: 11))
                     .foregroundStyle(Palette.secondary)
                     .lineLimit(1)
             }
@@ -224,11 +226,11 @@ struct KeepAwakeCard: View {
                 ForEach(keepAwake.islandPresets) { preset in
                     let isCurrent = keepAwake.isOn && keepAwake.presetID == preset.id
                     Button(preset.label) { keepAwake.start(preset) }
-                        .buttonStyle(PillButtonStyle(isSelected: isCurrent, fillsWidth: true))
+                        .buttonStyle(PillButtonStyle(isTinted: isCurrent, fillsWidth: true))
                         .overlay {
                             // The default length is outlined while off, as the one to pick without thinking.
                             if !keepAwake.isOn && preset.id == keepAwake.defaultPresetID {
-                                Capsule().stroke(Palette.paleBlue.opacity(0.7), lineWidth: 1.5)
+                                Capsule().stroke(Palette.cyan.opacity(0.7), lineWidth: 1.5)
                             }
                         }
                 }
@@ -248,16 +250,16 @@ struct UsageCard: View {
     let usage: UsageModel
 
     var body: some View {
-        Card("AI Usage", symbol: "gauge.with.dots.needle.33percent", tint: .white) {
+        Card("AI Usage", symbol: "gauge.with.dots.needle.33percent", tint: Palette.purple) {
             if let lastRead = usage.lastRead {
                 Text("read \(lastRead.formatted(date: .omitted, time: .shortened))")
-                    .font(Typeface.text(10))
+                    .font(.system(size: 11))
                     .foregroundStyle(Palette.secondary)
             }
         } content: {
             if usage.readings.isEmpty {
                 Text("No limits yet. Connect Claude Code or run Codex: right-click the island and open Settings → AI Usage.")
-                    .font(Typeface.text(11))
+                    .font(.system(size: 11))
                     .foregroundStyle(Palette.secondary)
             } else {
                 let now = Date()
@@ -280,23 +282,23 @@ struct UsageCard: View {
         let percent: String = "\(Int((used * 100).rounded()))%"
         return VStack(spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(name).font(Typeface.text(12, weight: .semibold))
+                Text(name).font(.system(size: 12, weight: .semibold))
                 Text("· " + Self.windowName(window.label))
-                    .font(Typeface.text(12))
+                    .font(.system(size: 12))
                     .foregroundStyle(Palette.secondary)
                 Spacer(minLength: 4)
                 Text(percent)
-                    .font(Typeface.number(12, weight: .bold))
-                    .foregroundStyle(isHigh ? Palette.amber : .white)
+                    .font(.system(size: 12, weight: .bold).monospacedDigit())
+                    .foregroundStyle(isHigh ? Palette.orange : .white)
                 if usage.showsResetTimes, let reset = resetText(window, at: now) {
                     Text("· resets " + reset)
-                        .font(Typeface.text(10))
+                        .font(.system(size: 10))
                         .foregroundStyle(Palette.secondary)
                 }
             }
             .lineLimit(1)
             .monospacedDigit()
-            Bar(value: used, tint: isHigh ? Palette.amber : Palette.paleBlue, height: 3)
+            Bar(value: used, tint: isHigh ? Palette.orange : Palette.purple, height: 3)
         }
     }
 
@@ -323,10 +325,10 @@ struct CalendarCard: View {
     let calendar: CalendarModel
 
     var body: some View {
-        Card("Calendar", symbol: "calendar", tint: Palette.teal) {
+        Card("Calendar", symbol: "calendar", tint: Palette.red) {
             if calendar.access == .granted, !calendar.events.isEmpty {
                 Text("Next \(min(calendar.events.count, 3))")
-                    .font(Typeface.text(10))
+                    .font(.system(size: 11))
                     .foregroundStyle(Palette.secondary)
             }
         } content: {
@@ -349,40 +351,39 @@ struct CalendarWideCard: View {
         let now = Date()
         HStack(spacing: IslandLayout.spacing) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("TODAY")
-                    .font(Typeface.text(10, weight: .semibold))
-                    .tracking(0.6)
+                Text("Today")
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Palette.secondary)
                 Text(now, format: .dateTime.day())
-                    .font(Typeface.number(56, weight: .bold))
+                    .font(.system(size: 56, weight: .bold).monospacedDigit())
                 Text(now, format: .dateTime.weekday(.wide))
-                    .font(Typeface.text(15, weight: .bold))
+                    .font(.system(size: 15, weight: .bold))
                 Text(now, format: .dateTime.month(.wide).year())
-                    .font(Typeface.text(11))
+                    .font(.system(size: 11))
                     .foregroundStyle(Palette.secondary)
                 Spacer(minLength: 0)
                 if calendar.access == .granted {
                     Text(calendar.today.isEmpty ? "Nothing else today" : "\(calendar.today.count) more today")
-                        .font(Typeface.text(10))
+                        .font(.system(size: 10))
                         .foregroundStyle(Palette.secondary)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 14)
             .padding(.vertical, 13)
             .frame(width: 150, alignment: .topLeading)
             .frame(maxHeight: .infinity, alignment: .topLeading)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: 19, style: .continuous))
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
 
-            Card("Calendar", symbol: "calendar", tint: Palette.teal) {
+            Card("Calendar", symbol: "calendar", tint: Palette.red) {
                 Text("Rest of today")
-                    .font(Typeface.text(10))
+                    .font(.system(size: 11))
                     .foregroundStyle(Palette.secondary)
             } content: {
                 CalendarAccessGate(calendar: calendar, empty: "Nothing else today.") {
                     let today = calendar.today
                     if today.isEmpty {
                         Text("Nothing else today.")
-                            .font(Typeface.text(11))
+                            .font(.system(size: 11))
                             .foregroundStyle(Palette.secondary)
                     } else {
                         VStack(spacing: 6) {
@@ -422,7 +423,7 @@ private struct CalendarAccessGate<Content: View>: View {
 
     private func note(_ text: String) -> some View {
         Text(text)
-            .font(Typeface.text(11))
+            .font(.system(size: 11))
             .foregroundStyle(Palette.secondary)
     }
 }
@@ -449,11 +450,11 @@ private struct JoinButtonStyle: ButtonStyle {
             PillButtonStyle(isPrimary: true).makeBody(configuration: configuration)
         } else {
             configuration.label
-                .font(Typeface.number(10, weight: .bold))
-                .foregroundStyle(.black)
+                .font(.system(size: 10, weight: .bold).monospacedDigit())
+                .foregroundStyle(.white)
                 .padding(.horizontal, 10)
                 .frame(height: 19)
-                .background(Palette.teal.opacity(configuration.isPressed ? 0.7 : 1), in: Capsule())
+                .background(Palette.blue.opacity(configuration.isPressed ? 0.7 : 1), in: Capsule())
                 .contentShape(Capsule())
                 .modifier(PressFeedback(isPressed: configuration.isPressed, litByHover: false))
         }
@@ -472,28 +473,28 @@ private struct EventRow: View {
         HStack(spacing: 10) {
             if showsTime {
                 Text(event.isAllDay ? "All day" : event.start.formatted(date: .omitted, time: .shortened))
-                    .font(Typeface.number(11, weight: .bold))
+                    .font(.system(size: 11, weight: .bold).monospacedDigit())
                     .foregroundStyle(Palette.secondary)
                     .frame(width: 44, alignment: .leading)
             }
             Capsule().fill(event.color).frame(width: 3, height: 28)
             VStack(alignment: .leading, spacing: 1) {
-                Text(event.title).font(Typeface.text(12, weight: .semibold))
+                Text(event.title).font(.system(size: 12, weight: .semibold))
                 Text(subtitle(at: now))
-                    .font(Typeface.text(10))
+                    .font(.system(size: 10))
                     .foregroundStyle(Palette.secondary)
             }
             .lineLimit(1)
             Spacer(minLength: 4)
             if isNext, !event.isAllDay, event.start.timeIntervalSince(now) < 60 * 60 {
                 EventCountdown(event: event)
-                    .font(Typeface.number(11, weight: .bold))
+                    .font(.system(size: 11, weight: .bold).monospacedDigit())
                     .padding(.horizontal, 8)
                     .frame(height: 19)
-                    .background(Palette.teal.opacity(0.16), in: Capsule())
+                    .background(Palette.blue.opacity(0.22), in: Capsule())
             } else if !showsTime {
                 Text(when(at: now))
-                    .font(Typeface.text(11))
+                    .font(.system(size: 11))
                     .foregroundStyle(Palette.secondary)
             }
             if let url = event.meetingURL, !event.isAllDay,

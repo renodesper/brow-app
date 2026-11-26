@@ -99,8 +99,6 @@ final class IslandState {
     /// Whether the pointer rests on the closed island, which then grows a little: it is about to open, or can be
     /// clicked open.
     var isAnticipating = false
-    /// The battery as it was when the island last opened, for the header. Nil on a Mac without one.
-    var battery: PowerSource.Battery?
 }
 
 /// The island's sizes, in points. The design was drawn at 1.25×, so its pixels are divided by 1.25 here.

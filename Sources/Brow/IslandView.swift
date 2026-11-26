@@ -115,17 +115,28 @@ struct IslandShape: Shape {
 
 /// The design's colors: one accent per feature, on black.
 enum Palette {
-    /// Pomodoro focus.
-    static let amber = Color(red: 1, green: 0xD2 / 255, blue: 0x9E / 255)
-    /// Keep Awake, usage bars.
-    static let paleBlue = Color(red: 0xD6 / 255, green: 0xE3 / 255, blue: 1)
-    /// Calendar, Pomodoro breaks.
-    static let teal = Color(red: 0x8C / 255, green: 0xF3 / 255, blue: 0xF3 / 255)
-    /// Text on a pale blue fill, and the settings' accent.
-    static let navy = Color(red: 0, green: 0x46 / 255, blue: 0x8F / 255)
-    static let card = Color(white: 0x16 / 255)
-    static let secondary = Color.white.opacity(0.62)
+    /// Pomodoro focus, and a usage limit past 80%. systemOrange, dark.
+    static let orange = Color(rgb: 0xFF9F0A)
+    /// Pomodoro breaks. systemGreen, dark.
+    static let green = Color(rgb: 0x30D158)
+    /// Keep Awake. systemCyan, dark.
+    static let cyan = Color(rgb: 0x64D2FF)
+    /// AI Usage title and bars. systemPurple, dark.
+    static let purple = Color(rgb: 0xBF5AF2)
+    /// The Calendar card's title. systemRed, dark.
+    static let red = Color(rgb: 0xFF453A)
+    /// The "in 12m" chip on the next event. systemBlue, dark.
+    static let blue = Color(rgb: 0x0A84FF)
+    static let card = Color(rgb: 0x1C1C1E)
+    static let secondary = Color.white.opacity(0.6)
     static let track = Color.white.opacity(0.12)
+}
+
+private extension Color {
+    init(rgb: UInt32) {
+        self.init(red: Double((rgb >> 16) & 0xFF) / 255, green: Double((rgb >> 8) & 0xFF) / 255,
+                  blue: Double(rgb & 0xFF) / 255)
+    }
 }
 
 /// What rests beside the notch while the island is closed: what is going on to the left of the camera, and
@@ -153,7 +164,7 @@ private struct CompactIsland: View {
                 if compact.keepAwake {
                     Image(systemName: "cup.and.saucer.fill")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Palette.paleBlue)
+                        .foregroundStyle(Palette.cyan)
                         .transition(glyphTransition)
                 }
             }
@@ -175,7 +186,7 @@ private struct CompactIsland: View {
             .padding(.trailing, 12)
             .frame(width: wing, alignment: .trailing)
         }
-        .font(Typeface.number(13, weight: .bold))
+        .font(.system(size: 13, weight: .bold).monospacedDigit())
         .monospacedDigit()
         .lineLimit(1)
         .frame(height: model.island.notch.height)
@@ -197,12 +208,8 @@ private struct OpenIsland: View {
             HStack(spacing: 0) {
                 Text(Date.now, format: .dateTime.weekday(.wide).day().month(.wide))
                 Spacer(minLength: island.notch.width + 16)
-                if let battery = island.battery {
-                    Label("\(battery.percent)%", systemImage: Self.batterySymbol(for: battery.percent))
-                        .labelStyle(.titleAndIcon)
-                }
             }
-            .font(Typeface.text(12, weight: .semibold))
+            .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(Palette.secondary)
             .lineLimit(1)
             .padding(.horizontal, 12)
@@ -239,16 +246,6 @@ private struct OpenIsland: View {
         }
         .foregroundStyle(.white)
         .animation(IslandLayout.animation(reduceMotion: reduceMotion), value: island.screenIndex)
-    }
-
-    private static func batterySymbol(for percent: Int) -> String {
-        switch percent {
-        case 88...: "battery.100percent"
-        case 63...: "battery.75percent"
-        case 38...: "battery.50percent"
-        case 13...: "battery.25percent"
-        default: "battery.0percent"
-        }
     }
 }
 
@@ -308,14 +305,14 @@ private struct PeekView: View {
             HStack(spacing: 14) {
                 switch peek {
                 case .eventStarted(let event):
-                    CalendarGlyph(color: event.color, size: 40)
+                    CalendarGlyph(color: event.color, size: 38)
                     titles(event.title, "\(timeRange(event)) · \(event.calendarTitle)")
                     Spacer(minLength: 8)
                     HStack(spacing: 8) {
-                        Circle().fill(Palette.teal).frame(width: 8, height: 8)
+                        Circle().fill(event.color).frame(width: 8, height: 8)
                         Text("Now")
                     }
-                    .font(Typeface.number(18, weight: .bold))
+                    .font(.system(size: 14, weight: .semibold).monospacedDigit())
                     if let url = event.meetingURL { JoinButton(url: url, isProminent: true) }
                 case .phaseFinished(let phase):
                     phaseFinished(phase)
@@ -335,9 +332,9 @@ private struct PeekView: View {
     private var hello: some View {
         Image(systemName: "hand.wave.fill")
             .font(.system(size: 18, weight: .bold))
-            .foregroundStyle(Palette.teal)
-            .frame(width: 40, height: 40)
-            .background(Palette.teal.opacity(0.16), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .foregroundStyle(Palette.cyan)
+            .frame(width: 38, height: 38)
+            .background(Palette.cyan.opacity(0.22), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         titles("Brow is running",
                model.preferences.openMode == .hover ? "Rest the pointer on the notch to open it." : "Click the notch to open it.")
         Spacer(minLength: 8)
@@ -351,10 +348,10 @@ private struct PeekView: View {
         let nextMinutes = Int(timer.settings.length(of: next) / 60)
         Image(systemName: ended == .focus ? "checkmark" : "cup.and.saucer.fill")
             .font(.system(size: 18, weight: .bold))
-            .foregroundStyle(ended == .focus ? Palette.amber : Palette.teal)
-            .frame(width: 40, height: 40)
-            .background((ended == .focus ? Palette.amber : Palette.teal).opacity(0.16),
-                        in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .foregroundStyle(ended == .focus ? Palette.orange : Palette.green)
+            .frame(width: 38, height: 38)
+            .background((ended == .focus ? Palette.orange : Palette.green).opacity(0.22),
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         if ended == .focus {
             titles("Focus done", timer.isRunning
                    ? "Round \(timer.currentRound) of \(timer.settings.roundsUntilLongBreak) · break started"
@@ -368,24 +365,24 @@ private struct PeekView: View {
                 if !timer.isRunning {
                     Button("Later") { actions.endPeek() }
                         .buttonStyle(PillButtonStyle())
-                    Button("Start focus") {
+                    Button("Start Focus") {
                         pomodoro.toggle()
                         actions.endPeek()
                     }
-                    .buttonStyle(PillButtonStyle(isPrimary: true))
+                    .buttonStyle(PillButtonStyle(isPrimary: true, tint: Palette.orange))
                 }
             } else {
-                Button("Skip break") {
+                Button("Skip Break") {
                     pomodoro.skip()
                     actions.endPeek()
                 }
                 .buttonStyle(PillButtonStyle())
                 if !timer.isRunning {
-                    Button("Start break") {
+                    Button("Start Break") {
                         pomodoro.toggle()
                         actions.endPeek()
                     }
-                    .buttonStyle(PillButtonStyle(isPrimary: true))
+                    .buttonStyle(PillButtonStyle(isPrimary: true, tint: Palette.orange))
                 }
             }
         }
@@ -393,8 +390,8 @@ private struct PeekView: View {
 
     private func titles(_ title: String, _ subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(title).font(Typeface.text(16, weight: .bold))
-            Text(subtitle).font(Typeface.text(12)).foregroundStyle(Palette.secondary)
+            Text(title).font(.system(size: 14, weight: .semibold))
+            Text(subtitle).font(.system(size: 12)).foregroundStyle(Palette.secondary)
         }
         .lineLimit(1)
     }
@@ -412,7 +409,7 @@ struct CalendarGlyph: View {
     var body: some View {
         Image(systemName: "calendar")
             .font(.system(size: size * 0.5, weight: .bold))
-            .foregroundStyle(.black.opacity(0.7))
+            .foregroundStyle(.white)
             .frame(width: size, height: size)
             .background(color, in: RoundedRectangle(cornerRadius: size * 0.3, style: .continuous))
     }
@@ -471,11 +468,11 @@ struct EventCountdown: View {
             let text = Agenda.countdownText(to: event.start, at: context.date)
             if event.start <= context.date, showsDot {
                 HStack(spacing: 5) {
-                    Circle().fill(Palette.teal).frame(width: 6, height: 6)
+                    Circle().fill(event.color).frame(width: 6, height: 6)
                     Text(text).foregroundStyle(.white)
                 }
             } else {
-                Text(text).foregroundStyle(Palette.teal)
+                Text(text).foregroundStyle(event.color)
             }
         }
     }
@@ -512,8 +509,8 @@ extension Pomodoro.Phase {
 
     var tint: Color {
         switch self {
-        case .focus: Palette.amber
-        case .shortBreak, .longBreak: Palette.teal
+        case .focus: Palette.orange
+        case .shortBreak, .longBreak: Palette.green
         }
     }
 }

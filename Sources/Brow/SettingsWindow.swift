@@ -483,10 +483,10 @@ private struct ScreenThumbnail: View {
 extension BrowCore.Widget {
     var tint: Color {
         switch self {
-        case .calendar: Palette.teal
-        case .pomodoro: Palette.amber
-        case .keepAwake: Palette.paleBlue
-        case .usage: .white
+        case .calendar: Palette.red
+        case .pomodoro: Palette.orange
+        case .keepAwake: Palette.cyan
+        case .usage: Palette.purple
         }
     }
 }
