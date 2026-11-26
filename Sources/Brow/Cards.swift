@@ -69,6 +69,7 @@ struct PillButtonStyle: ButtonStyle {
             .frame(height: 30)
             .background(fill.opacity(configuration.isPressed ? 0.7 : 1), in: Capsule())
             .contentShape(Capsule())
+            .modifier(PressFeedback(isPressed: configuration.isPressed, litByHover: !isPrimary))
     }
 }
 
@@ -81,6 +82,25 @@ private struct IconButtonStyle: ButtonStyle {
             .frame(width: 30, height: 30)
             .background(Palette.track.opacity(configuration.isPressed ? 0.6 : 1), in: Circle())
             .contentShape(Circle())
+            .modifier(PressFeedback(isPressed: configuration.isPressed))
+    }
+}
+
+/// How a pressable control feels: it shrinks a little under the finger and lights up under the pointer. The
+/// white main button doesn't light up, since there is nothing brighter than white.
+private struct PressFeedback: ViewModifier {
+    let isPressed: Bool
+    var litByHover = true
+    @State private var isHovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .brightness(litByHover && isHovering ? 0.12 : 0)
+            .scaleEffect(isPressed && !reduceMotion ? 0.96 : 1)
+            .animation(.snappy(duration: 0.18), value: isPressed)
+            .animation(.easeOut(duration: 0.12), value: isHovering)
+            .onHover { isHovering = $0 }
     }
 }
 
@@ -137,8 +157,14 @@ struct PomodoroCard: View {
             PomodoroProgress(pomodoro: pomodoro)
             HStack(spacing: 6) {
                 Button { pomodoro.toggle() } label: {
-                    Label(pomodoro.actionTitle, systemImage: timer.isRunning ? "pause.fill" : "play.fill")
+                    Label {
+                        Text(pomodoro.actionTitle)
+                    } icon: {
+                        Image(systemName: timer.isRunning ? "pause.fill" : "play.fill")
+                            .contentTransition(.symbolEffect(.replace))
+                    }
                 }
+                .animation(.snappy(duration: 0.2), value: timer.isRunning)
                 .buttonStyle(PillButtonStyle(isPrimary: true))
                 Button { pomodoro.skip() } label: { Image(systemName: "forward.end.fill") }
                     .buttonStyle(IconButtonStyle())
