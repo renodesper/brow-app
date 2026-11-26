@@ -175,7 +175,7 @@ private struct CompactIsland: View {
             .padding(.trailing, 12)
             .frame(width: wing, alignment: .trailing)
         }
-        .font(Typeface.number(13, weight: .bold))
+        .font(.system(size: 13, weight: .bold).monospacedDigit())
         .monospacedDigit()
         .lineLimit(1)
         .frame(height: model.island.notch.height)
@@ -202,7 +202,7 @@ private struct OpenIsland: View {
                         .labelStyle(.titleAndIcon)
                 }
             }
-            .font(Typeface.text(12, weight: .semibold))
+            .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(Palette.secondary)
             .lineLimit(1)
             .padding(.horizontal, 12)
@@ -315,7 +315,7 @@ private struct PeekView: View {
                         Circle().fill(Palette.teal).frame(width: 8, height: 8)
                         Text("Now")
                     }
-                    .font(Typeface.number(18, weight: .bold))
+                    .font(.system(size: 18, weight: .bold).monospacedDigit())
                     if let url = event.meetingURL { JoinButton(url: url, isProminent: true) }
                 case .phaseFinished(let phase):
                     phaseFinished(phase)
@@ -393,8 +393,8 @@ private struct PeekView: View {
 
     private func titles(_ title: String, _ subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(title).font(Typeface.text(16, weight: .bold))
-            Text(subtitle).font(Typeface.text(12)).foregroundStyle(Palette.secondary)
+            Text(title).font(.system(size: 16, weight: .bold))
+            Text(subtitle).font(.system(size: 12)).foregroundStyle(Palette.secondary)
         }
         .lineLimit(1)
     }
