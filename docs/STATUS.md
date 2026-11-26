@@ -51,6 +51,8 @@ none of it has been looked at on a notched MacBook yet.
 | 5. Right-click menu (#25) | The Keep Awake submenu lists all nine lengths and Indefinitely |
 | 6. Header (#25) | The open island shows the date only; the battery label and the read on every open are removed. Keep Awake's battery cut-off is unchanged |
 
+Multiple displays: there is one island on each connected display (the built-in one with its notch, an external one as a black pill at the top centre), turned on for all by default. Settings → General → "Show on displays" turns each off; the last one stays on. The displays share every model (timers, events, usage, settings, the list of screens), but each keeps its own open state, peek, swipe and current screen, so pointing at one display opens only that island; peeks (event starting, Focus done, hello) show on all of them. Tried on a MacBook with an external monitor: the island opens on the external display while the built-in one stays closed, hiding and showing an external display from Settings takes effect at once. Not tried: unplugging while an island is open, or three displays.
+
 Afterwards: the Keep Awake default length setting is removed (its only visible effect was an outline on one button, which looked inconsistent); the island's card keeps 30m, 1h, 2h and No end and the right-click menu lists all nine lengths. Settings polish: Calendar access is a switch (off takes you to System Settings, since only it can revoke access); AI Usage no longer shows the green dot and "Updated hh:mm"; notes under sections are left-aligned; the Pomodoro steppers sit to the right of their values.
 
 Not done from the v2 spec: −0.5 tracking on the big card numbers, and the calendar glyph beside the notch is still a
@@ -256,7 +258,7 @@ Places where the code is most likely to be wrong, to check first on a Mac.
 
 **Behaviour**
 
-- Follow the screen the pointer is on, not only the built-in one.
+- ~~Follow the screen the pointer is on, not only the built-in one.~~ Done: one island per display (see below).
 - Show how old a usage reading is ("as of 14:02"); numbers are only as fresh as the tool's last reply.
 - Write the Claude Code capture file in one step, so a read can never land on a half-written file. Today a
   half-written file is simply ignored until the next open.

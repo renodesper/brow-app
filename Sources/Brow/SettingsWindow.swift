@@ -96,7 +96,7 @@ struct SettingsView: View {
         } detail: {
             Group {
                 switch pane {
-                case .general: GeneralPane(preferences: model.preferences, island: model.island, shortcut: model.settingsShortcut)
+                case .general: GeneralPane(preferences: model.preferences, detectedNotch: model.detectedNotch, shortcut: model.settingsShortcut)
                 case .screens: ScreensPane(preferences: model.preferences)
                 case .calendar: CalendarPane(calendar: model.calendar)
                 case .pomodoro: PomodoroPane(pomodoro: model.pomodoro)
@@ -165,10 +165,11 @@ private struct StepperRow: View {
 
 private struct GeneralPane: View {
     @Bindable var preferences: IslandPreferences
-    let island: IslandState
+    let detectedNotch: CGSize
     let shortcut: String?
     @State private var opensAtLogin = SMAppService.mainApp.status == .enabled
     @State private var loginError: String?
+    @State private var screens = NSScreen.screens
 
     var body: some View {
         Form {
@@ -197,12 +198,41 @@ private struct GeneralPane: View {
                     "Right-click the island any time for Keep Awake, Pomodoro and these settings, or press \($0) from any app to open them."
                 } ?? "Right-click the island any time for Keep Awake, Pomodoro and these settings.")
             }
+            displays
             islandSize
             Section("Beside the notch") {
                 ToggleRow(title: "Show live activities beside the notch",
                           detail: "Event countdown, Pomodoro time and Keep Awake while they run. Each can be turned off in its own section.",
                           isOn: $preferences.showsLiveActivities)
             }
+        }
+    }
+
+    /// The island on each connected display, which can be turned off one by one. The last one stays on, so the
+    /// island is never left with nowhere to be.
+    private var displays: some View {
+        let ids = screens.compactMap(\.displayUUID)
+        let shown = ids.filter { preferences.showsIsland(onDisplay: $0) }
+        return Section {
+            ForEach(screens, id: \.displayUUID) { screen in
+                if let id = screen.displayUUID {
+                    let isOn = preferences.showsIsland(onDisplay: id)
+                    Toggle(isOn: Binding(get: { isOn }, set: { preferences.setShowsIsland($0, onDisplay: id) })) {
+                        Text(screen.localizedName)
+                        if screen.safeAreaInsets.top > 0 {
+                            Text("Built-in, with a notch").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .disabled(isOn && shown.count <= 1)
+                }
+            }
+        } header: {
+            Text("Show on displays")
+        } footer: {
+            FooterText("Each display with Brow on has its own island. They show the same timers, events and settings, but each opens on its own when you point at it.")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)) { _ in
+            screens = NSScreen.screens
         }
     }
 
@@ -231,7 +261,7 @@ private struct GeneralPane: View {
 
     /// The closed island's size: the notch's own, or a custom one that is never smaller.
     private var islandSize: some View {
-        let detected = island.detectedNotch
+        let detected = detectedNotch
         return Section {
             Picker("Size", selection: $preferences.matchesNotch) {
                 Text("Match Notch").tag(true)

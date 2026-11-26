@@ -3,8 +3,8 @@ import BrowCore
 import Observation
 import SwiftUI
 
-/// Owns the island's window: where it sits, how large it is, and how the pointer opens, closes, swipes and
-/// right-clicks it.
+/// Owns the island's window on one display: where it sits, how large it is, and how the pointer opens, closes,
+/// swipes and right-clicks it. With several displays there is one of these for each.
 ///
 /// One panel does everything. Its frame is the island's own frame, so it never takes a click meant for the menu
 /// bar or the app below. It grows as soon as the island needs more room and shrinks only once the island has
@@ -12,7 +12,9 @@ import SwiftUI
 /// frame changes.
 @MainActor
 final class IslandController {
-    private let model: AppModel
+    private let model: DisplayContext
+    /// The display this island sits on, by its stable identity.
+    let displayID: String
     private let panel: IslandPanel
     /// Its size never changes with the panel's: it is as large as the island ever gets, plus the overshoot room,
     /// and pinned to the top
@@ -28,8 +30,9 @@ final class IslandController {
     private var eventMonitors: [Any] = []
     private var swipe = SwipeTracker()
 
-    init(model: AppModel, makeMenu: @escaping () -> NSMenu) {
+    init(model: DisplayContext, displayID: String, makeMenu: @escaping () -> NSMenu) {
         self.model = model
+        self.displayID = displayID
         self.makeMenu = makeMenu
         panel = IslandPanel()
 
@@ -59,6 +62,19 @@ final class IslandController {
         layout()
         followSize()
         panel.orderFrontRegardless()
+    }
+
+    /// Takes the island off the screen and stops listening, for a display that was turned off or unplugged.
+    func teardown() {
+        pendingOpen?.cancel()
+        pendingClose?.cancel()
+        pendingShrink?.cancel()
+        pendingPeekEnd?.cancel()
+        if let screenObserver { NotificationCenter.default.removeObserver(screenObserver) }
+        screenObserver = nil
+        eventMonitors.forEach { NSEvent.removeMonitor($0) }
+        eventMonitors = []
+        panel.orderOut(nil)
     }
 
     /// Opens the island a little to show that something happened, like an event starting.
@@ -241,13 +257,17 @@ final class IslandController {
     }
 
     private func layout() {
-        // The built-in screen with the notch if there is one, otherwise the main screen.
-        guard let screen = NSScreen.screens.first(where: { $0.safeAreaInsets.top > 0 }) ?? NSScreen.main else { return }
+        guard let screen = NSScreen.screens.first(where: { $0.displayUUID == displayID }) else { return }
         let notch = Self.notchRect(on: screen)
         let state = model.island
         // Whole, even sizes, so half of every width is a whole point and all frames share one center.
         let detectedSize = CGSize(width: (notch.width / 2).rounded(.up) * 2, height: notch.height.rounded(.up))
         if state.detectedNotch != detectedSize { state.detectedNotch = detectedSize }
+        // Settings shows the notch's own size: the notched display's, or the first one's on a Mac without a notch.
+        let hasNotchedScreen = NSScreen.screens.contains { $0.safeAreaInsets.top > 0 }
+        if (screen.safeAreaInsets.top > 0 || !hasNotchedScreen), model.app.detectedNotch != detectedSize {
+            model.app.detectedNotch = detectedSize
+        }
         let preferences = model.preferences
         let resolved = NotchSizing.resolved(detectedWidth: Double(detectedSize.width),
                                             detectedHeight: Double(detectedSize.height),
