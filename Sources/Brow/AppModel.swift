@@ -103,6 +103,9 @@ enum IslandLayout {
     static let padding: CGFloat = 14
     static let dotsHeight: CGFloat = 22
 
+    /// How long the pointer may be outside the island before it closes. Coming back within it keeps it open.
+    static let closeGrace: Duration = .milliseconds(280)
+
     /// The one spring every change of the island's size or content follows, so the shape and the cards settle
     /// together.
     static let spring = Spring(duration: 0.35, bounce: 0.15)
