@@ -223,16 +223,10 @@ struct KeepAwakeCard: View {
             }
             Spacer(minLength: 0)
             HStack(spacing: 6) {
-                ForEach(keepAwake.islandPresets) { preset in
+                ForEach(KeepAwake.presets) { preset in
                     let isCurrent = keepAwake.isOn && keepAwake.presetID == preset.id
                     Button(preset.label) { keepAwake.start(preset) }
                         .buttonStyle(PillButtonStyle(isTinted: isCurrent, fillsWidth: true))
-                        .overlay {
-                            // The default length is outlined while off, as the one to pick without thinking.
-                            if !keepAwake.isOn && preset.id == keepAwake.defaultPresetID {
-                                Capsule().stroke(Palette.cyan.opacity(0.7), lineWidth: 1.5)
-                            }
-                        }
                 }
             }
         }

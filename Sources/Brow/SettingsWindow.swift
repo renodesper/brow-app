@@ -659,14 +659,6 @@ private struct KeepAwakePane: View {
     var body: some View {
         Form {
             Section {
-                Picker("Default length", selection: $keepAwake.defaultPresetID) {
-                    ForEach(KeepAwake.choices) { Text($0.settingsLabel).tag($0.id) }
-                }
-                .pickerStyle(.menu)
-            } footer: {
-                FooterText("Outlined on the island’s Keep Awake card as the one to pick without thinking.")
-            }
-            Section {
                 ToggleRow(title: "Keep the display on",
                           detail: "When off, the Mac stays awake but the display may sleep.",
                           isOn: $keepAwake.keepsDisplayOn)
