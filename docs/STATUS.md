@@ -1,6 +1,6 @@
 # Brow: features, progress and what's next
 
-Last updated 26 Nov 2026: v0.2.0 plus the v2 native macOS look (PRs #19–#25), compiled and tested, not yet tried on a notch.
+Last updated 27 Nov 2026: version 1.0.0 (v0.2.0 plus the v2 native macOS look, several displays, interactive swipe and the release tooling), compiled and tested. Released as a plain, ad-hoc signed disk image; notarization waits for an Apple Developer account.
 
 ## Where the project stands
 

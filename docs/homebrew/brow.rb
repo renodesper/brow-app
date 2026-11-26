@@ -1,7 +1,7 @@
 # DRAFT of Casks/brow.rb for the tap renodesper/homebrew-brow. It cannot be installed yet: there is no release to
 # download. See "Homebrew" in docs/RELEASING.md for what has to exist first and for how to try it.
 cask "brow" do
-  version "0.2.0"
+  version "1.0.0"
   sha256 "REPLACE_WITH_THE_SHA256_OF_THE_DMG"
 
   url "https://github.com/renodesper/brow/releases/download/v#{version}/Brow-#{version}.dmg"
