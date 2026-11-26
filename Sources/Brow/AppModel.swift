@@ -1,6 +1,7 @@
 import Foundation
 import BrowCore
 import Observation
+import SwiftUI
 
 /// Everything the island shows, in one place. Each part is observable on its own, so a view redraws only for
 /// the part it reads.
@@ -93,7 +94,16 @@ enum IslandLayout {
     static let spacing: CGFloat = 10
     static let padding: CGFloat = 14
     static let dotsHeight: CGFloat = 22
-    static let openDuration = 0.35
+
+    /// The one spring every change of the island's size or content follows, so the shape and the cards settle
+    /// together.
+    static let spring = Spring(duration: 0.35, bounce: 0.15)
+    static var animation: Animation { .spring(spring) }
+    /// How long the spring takes to come to rest. The window must not shrink before then.
+    static var settlingDuration: TimeInterval { spring.settlingDuration }
+    /// Room beyond the island at the sides and below it while it animates, so a spring that overshoots is not
+    /// cut off by the window. The top has none: the island hangs from the top of the screen.
+    static let overshoot: CGFloat = 20
 
     /// Room on each side of the notch while something is going on; wider when several glyphs share it.
     static func wing(glyphs: Int) -> CGFloat {

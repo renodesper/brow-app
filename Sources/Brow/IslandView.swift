@@ -47,8 +47,8 @@ struct IslandView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         // The window sits in the screen's unsafe area on purpose: the notch is the whole point.
         .ignoresSafeArea()
-        .animation(.spring(duration: IslandLayout.openDuration, bounce: 0.15), value: mode)
-        .animation(.spring(duration: IslandLayout.openDuration), value: size)
+        .animation(IslandLayout.animation, value: mode)
+        .animation(IslandLayout.animation, value: size)
         .environment(\.colorScheme, .dark)
     }
 }
@@ -201,7 +201,7 @@ private struct OpenIsland: View {
             }
         }
         .foregroundStyle(.white)
-        .animation(.spring(duration: 0.3), value: island.screenIndex)
+        .animation(IslandLayout.animation, value: island.screenIndex)
     }
 }
 
