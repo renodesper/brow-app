@@ -130,6 +130,8 @@ final class IslandController {
 
     private func setOpen(_ open: Bool) {
         guard model.island.isOpen != open else { return }
+        model.island.isDragging = false
+        model.island.dragOffset = 0
         if open {
             pendingPeekEnd?.cancel()
             model.island.peek = nil
@@ -173,7 +175,8 @@ final class IslandController {
         NSMenu.popUpContextMenu(makeMenu(), with: event, for: view)
     }
 
-    /// A two-finger swipe on the open island moves one screen left or right.
+    /// A two-finger swipe on the open island drags the screen with the fingers, then moves one screen left or right
+    /// or springs back when they lift.
     private func scrolled(_ event: NSEvent) {
         guard model.island.isOpen, model.preferences.screens.count > 1,
               event.momentumPhase.isEmpty else { return }
@@ -190,9 +193,27 @@ final class IslandController {
         }
         // With natural scrolling the deltas already follow the fingers; without it they run the other way.
         let sign: Double = event.isDirectionInvertedFromDevice ? 1 : -1
-        let step = swipe.add(fingersX: sign * Double(event.scrollingDeltaX),
-                             fingersY: sign * Double(event.scrollingDeltaY), phase: phase)
-        if step != 0 { showScreen(model.island.screenIndex + step) }
+        let index = model.island.screenIndex
+        let outcome = swipe.add(fingersX: sign * Double(event.scrollingDeltaX),
+                                fingersY: sign * Double(event.scrollingDeltaY), phase: phase,
+                                time: event.timestamp, canGoNext: index < model.preferences.screens.count - 1,
+                                canGoPrevious: index > 0, width: Double(model.islandSize.width))
+        switch outcome {
+        case .none:
+            break
+        case .drag(let offset):
+            model.island.isDragging = true
+            model.island.dragOffset = offset
+        case .commit(let step):
+            // The screen changes and the offset returns to rest together: the old one keeps going from where the
+            // fingers left it, and the new one arrives from the side.
+            model.island.isDragging = false
+            showScreen(index + step)
+            model.island.dragOffset = 0
+        case .cancel:
+            model.island.isDragging = false
+            model.island.dragOffset = 0
+        }
     }
 
     // MARK: The frame

@@ -137,44 +137,105 @@ public enum IslandScreens {
     }
 }
 
-/// Turns a two-finger swipe on the trackpad into one step to the next or the previous screen.
+/// Follows a two-finger swipe on the trackpad: how far the current screen has been dragged, and at the end whether
+/// the swipe moves one screen or springs back.
 ///
-/// A swipe moves at most one screen however far it goes, and a mostly vertical one moves none.
+/// A swipe moves at most one screen however far it goes, a mostly vertical one moves none, and dragging toward a
+/// side with no screen resists like a rubber band and never commits.
 public struct SwipeTracker: Sendable {
     public enum Phase: Sendable {
         case began, changed, ended
     }
 
-    /// How far the fingers travel, in points, before the screen changes.
-    public static let threshold = 36.0
+    public enum Outcome: Equatable, Sendable {
+        /// Nothing to show: not a horizontal swipe, or none under way.
+        case none
+        /// The current screen is this far from rest, in points; negative is to the left.
+        case drag(Double)
+        /// The swipe is over and moves by this many screens: 1 for the next, -1 for the previous.
+        case commit(Int)
+        /// The swipe is over and the screen springs back.
+        case cancel
+    }
+
+    /// How far the fingers travel, in points, before the swipe is read as horizontal or vertical.
+    public static let lockDistance = 6.0
+    /// The share of the island's width a swipe has to cover to move a screen by distance alone.
+    public static let commitFraction = 0.25
+    /// How fast, in points a second, a flick has to be at the end to move a screen however short it was.
+    public static let flickSpeed = 500.0
+    /// The least a flick has to travel, in points.
+    public static let flickDistance = 12.0
+
+    private enum Axis { case undecided, horizontal, vertical }
 
     private var horizontal = 0.0
     private var vertical = 0.0
-    private var hasMoved = false
+    private var axis = Axis.undecided
+    private var velocity = 0.0
+    private var lastTime: Double?
 
     public init() {}
 
     /// - Parameters:
     ///   - fingersX: How far the fingers moved right since the last event; negative when they move left.
     ///   - fingersY: How far they moved down.
-    /// - Returns: 1 for the next screen (fingers moving left), -1 for the previous one, 0 for no change.
-    public mutating func add(fingersX: Double, fingersY: Double, phase: Phase) -> Int {
+    ///   - time: When the event happened, in seconds, for the speed of a flick.
+    ///   - canGoNext: Whether there is a screen after the current one.
+    ///   - canGoPrevious: Whether there is a screen before it.
+    ///   - width: The island's width in points, which the commit distance is a share of.
+    public mutating func add(fingersX: Double, fingersY: Double, phase: Phase, time: Double = 0,
+                             canGoNext: Bool = true, canGoPrevious: Bool = true, width: Double = 600) -> Outcome {
         switch phase {
         case .began:
+            reset()
             horizontal = fingersX
             vertical = fingersY
-            hasMoved = false
+            lastTime = time
+            return decideAxis() ? .drag(offset(canGoNext, canGoPrevious, width)) : .none
         case .changed:
             horizontal += fingersX
             vertical += fingersY
+            if let lastTime, time > lastTime { velocity = fingersX / (time - lastTime) }
+            lastTime = time
+            if axis == .undecided, !decideAxis() { return .none }
+            guard axis == .horizontal else { return .none }
+            return .drag(offset(canGoNext, canGoPrevious, width))
         case .ended:
-            horizontal = 0
-            vertical = 0
-            hasMoved = false
-            return 0
+            defer { reset() }
+            guard axis == .horizontal else { return .none }
+            let step = horizontal < 0 ? 1 : -1
+            guard step == 1 ? canGoNext : canGoPrevious else { return .cancel }
+            let farEnough = abs(horizontal) >= Self.commitFraction * width
+            let flicked = abs(velocity) >= Self.flickSpeed && abs(horizontal) >= Self.flickDistance
+                && (velocity < 0) == (horizontal < 0)
+            return farEnough || flicked ? .commit(step) : .cancel
         }
-        guard !hasMoved, abs(horizontal) >= Self.threshold, abs(horizontal) > 1.5 * abs(vertical) else { return 0 }
-        hasMoved = true
-        return horizontal < 0 ? 1 : -1
+    }
+
+    private mutating func reset() {
+        horizontal = 0
+        vertical = 0
+        axis = .undecided
+        velocity = 0
+        lastTime = nil
+    }
+
+    /// Reads the swipe as horizontal or vertical once it has gone far enough. Returns whether it is horizontal.
+    private mutating func decideAxis() -> Bool {
+        guard axis == .undecided else { return axis == .horizontal }
+        guard max(abs(horizontal), abs(vertical)) >= Self.lockDistance else { return false }
+        axis = abs(horizontal) > 1.5 * abs(vertical) ? .horizontal : .vertical
+        return axis == .horizontal
+    }
+
+    private func offset(_ canGoNext: Bool, _ canGoPrevious: Bool, _ width: Double) -> Double {
+        let hasScreen = horizontal < 0 ? canGoNext : canGoPrevious
+        guard !hasScreen else { return horizontal }
+        // Toward a side with nothing there it gives less and less, and never more than a fifth of the width.
+        let limit = 0.2 * width
+        let pull = abs(horizontal)
+        let resisted = limit * pull / (pull + limit)
+        return horizontal < 0 ? -resisted : resisted
     }
 }
