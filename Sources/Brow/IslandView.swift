@@ -225,8 +225,9 @@ private struct OpenIsland: View {
                 .offset(x: island.dragOffset)
                 .animation(island.isDragging ? nil : IslandLayout.animation(reduceMotion: reduceMotion),
                            value: island.dragOffset)
+                // No clip of its own: the island's shape clips it, and a rectangular clip here made a card dragged
+                // partly out of view lose its background or its bottom.
                 .frame(maxWidth: .infinity)
-                .clipped()
 
             if screens.count > 1 {
                 HStack(spacing: 0) {
