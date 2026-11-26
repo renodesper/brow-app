@@ -1,0 +1,125 @@
+name: Release
+
+# Publishing a release on GitHub (Releases → Draft a new release, with a tag like v0.2.0) builds Brow and attaches
+# the disk image to that release. Today the image is a plain one: signed ad-hoc, so Gatekeeper warns whoever opens
+# it. Once the secrets below exist, the same workflow signs with a Developer ID, notarizes and staples instead, with
+# no change to this file. See docs/RELEASING.md.
+#
+# Run by hand (Actions → Release → Run workflow) to try it without a release: the image is kept as a workflow
+# artifact and nothing is published.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  dmg:
+    # The newest macOS image, as in build.yml: SwiftUI's @State is a macro whose plugin ships with Xcode.
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
+
+      - name: Check that the tag matches the app's version
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Support/Info.plist)"
+          if [ "$TAG" != "v$version" ]; then
+            echo "The release is tagged $TAG but Support/Info.plist says version $version." >&2
+            echo "Raise the version, move the tag, and publish the release again." >&2
+            exit 1
+          fi
+
+      - name: Test
+        run: swift test
+
+      # Everything below up to "Plain disk image" only runs when these five secrets are set (Settings → Secrets and
+      # variables → Actions). Without them the job falls through to the plain image.
+      - name: Is there a Developer ID?
+        id: signing
+        env:
+          DEVELOPER_ID_P12: ${{ secrets.DEVELOPER_ID_P12 }}
+          DEVELOPER_ID_NAME: ${{ secrets.DEVELOPER_ID_NAME }}
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+        run: |
+          if [ -n "$DEVELOPER_ID_P12" ] && [ -n "$DEVELOPER_ID_NAME" ] && [ -n "$NOTARY_APPLE_ID" ] \
+             && [ -n "$NOTARY_TEAM_ID" ] && [ -n "$NOTARY_PASSWORD" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "No Developer ID secrets: making the plain, ad-hoc signed image."
+          fi
+
+      - name: Import the Developer ID certificate
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          DEVELOPER_ID_P12: ${{ secrets.DEVELOPER_ID_P12 }}
+          DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/release.keychain-db"
+          keychain_password="$(uuidgen)"
+          echo "::add-mask::$keychain_password"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          echo "$DEVELOPER_ID_P12" | base64 --decode > "$RUNNER_TEMP/developer-id.p12"
+          security import "$RUNNER_TEMP/developer-id.p12" -P "$DEVELOPER_ID_P12_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          rm -f "$RUNNER_TEMP/developer-id.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          echo "KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+
+      - name: Store the notarization credentials
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+        run: |
+          xcrun notarytool store-credentials brow-notary --apple-id "$NOTARY_APPLE_ID" \
+            --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PASSWORD" --keychain "$KEYCHAIN"
+
+      - name: Notarized disk image
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          DEVELOPER_ID_NAME: ${{ secrets.DEVELOPER_ID_NAME }}
+        run: make release DEVELOPER_ID="$DEVELOPER_ID_NAME" NOTARY_PROFILE=brow-notary NOTARY_KEYCHAIN="$KEYCHAIN"
+
+      - name: Plain disk image
+        if: steps.signing.outputs.enabled != 'true'
+        run: make dmg
+
+      - name: Find the image
+        id: image
+        run: |
+          image="$(ls build/Brow-*.dmg)"
+          echo "path=$image" >> "$GITHUB_OUTPUT"
+          echo "Made $image"
+
+      - name: Keep the image as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Brow-dmg
+          path: ${{ steps.image.outputs.path }}
+          if-no-files-found: error
+
+      - name: Attach the image to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+          IMAGE: ${{ steps.image.outputs.path }}
+        run: gh release upload "$TAG" "$IMAGE" --clobber

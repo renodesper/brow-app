@@ -46,8 +46,16 @@ security find-identity -v -p codesigning
 make run SIGN_ID="Apple Development: you@example.com (TEAMID)"
 ```
 
-To keep the identity out of your commands, put `SIGN_ID := …` once in `Makefile.local` (not committed). A build that
-other people can open, signed with a Developer ID and notarized, is `make release`; see `docs/RELEASING.md`.
+To keep the identity out of your commands, put `SIGN_ID := …` once in `Makefile.local` (not committed). A disk image
+is `make dmg`; one that other people can open without a warning, signed with a Developer ID and notarized, is
+`make release`. Publishing a release on GitHub builds and attaches the image by itself; see `docs/RELEASING.md`.
+
+## Installing a release
+
+Download `Brow-<version>.dmg` from the releases page, open it and drag Brow onto Applications. Until releases are
+notarized, macOS warns that the developer cannot be verified: open Brow once, then System Settings → Privacy &
+Security → "Open Anyway". Calendar access is asked again after each update for the same reason. If you turned on AI
+Usage for Claude Code, turn it off in Settings before deleting the app, so your status line is put back.
 
 ## How it stays small and quiet
 

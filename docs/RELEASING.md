@@ -1,61 +1,108 @@
 # Releasing Brow
 
-How to make a build that other people can open without Gatekeeper's "cannot be opened" warning: signed with a
-Developer ID, hardened, notarized by Apple and stapled. For your own Mac none of this is needed: `make run` is enough.
+Brow is released as a **disk image** (`Brow-<version>.dmg`: the app and a shortcut to `/Applications`), attached to a
+GitHub release by a workflow. There are two kinds, and which one you get depends only on whether the repository has the
+Apple Developer secrets (below):
 
-`make release` does the whole thing once the one-time setup below is done. Nothing here has been run end to end yet:
-the setup needs an Apple Developer account, and the Mac this was written on only has an "Apple Development"
-certificate, which is for running your own builds, not for sharing them.
+| | Plain image (today) | Notarized image (once there is a Developer ID) |
+|---|---|---|
+| Signed with | ad-hoc | Developer ID Application, hardened runtime |
+| Made by | `make dmg` | `make release` |
+| Opens on another Mac | with Gatekeeper's warning (see "Opening a plain image") | with no warning |
+| Calendar permission | asked again after every update, since an ad-hoc signature changes with each build | kept across updates |
+| Needs | nothing | a paid Apple Developer account |
 
-## What is already in the repo
+For your own Mac none of this is needed: `make run` is enough.
 
-- Bundle id `dev.bosan.Brow` (`Support/Info.plist`). Changing it later makes macOS treat the app as a new one: the
-  Calendar permission and the login item would be asked for again. Settle it before the first release.
-- `Support/Brow.entitlements`: the Calendar entitlement. The hardened runtime, which notarization requires, only lets
-  an app read Calendar with it. Nothing else is needed (no network, no sandbox, no scripting).
-- `make hardened`: the same hardened signature with your everyday identity, to see that the app still works (Calendar
-  included) before spending a notarization. Checked on 26 Nov 2026: it runs and shows events.
-- `make release`: sign with the Developer ID, zip, submit to Apple and wait, staple the ticket, check it with
-  `spctl`, and zip again so the zip carries the ticket. The result is `build/Brow-<version>.zip`.
+## Publishing a release (works today)
 
-## One-time setup
+1. Raise `CFBundleShortVersionString` and `CFBundleVersion` in `Support/Info.plist`, merge that to `main`.
+2. On GitHub: Releases → Draft a new release → choose a new tag `v<version>` (for example `v0.2.0`, matching the
+   version you just set) → Publish release.
+3. The **Release** workflow (`.github/workflows/release.yml`) runs on a macOS runner: it checks that the tag matches
+   the version, runs the tests, builds the image and attaches `Brow-<version>.dmg` to the release (and keeps a copy as
+   a workflow artifact). It takes a few minutes.
+4. To try it without publishing anything: Actions → Release → Run workflow. The image is kept as an artifact only.
+
+If the tag and the version disagree, the workflow stops with a message: raise the version, move the tag and publish
+again. A repository that is private pays for macOS runner minutes at a higher rate than the free allowance; a public
+one does not.
+
+### Opening a plain image
+
+The image is not notarized, so macOS warns that the developer cannot be verified. To open it: drag Brow to
+Applications, open it once, and when it is refused go to System Settings → Privacy & Security, scroll down and press
+"Open Anyway". Because the signature changes with each build, Calendar access is asked again after each update. Say
+so in the release notes until there is a Developer ID.
+
+## When there is an Apple Developer account
+
+Nothing in the workflow has to change: it notices the secrets and switches to `make release` by itself.
 
 1. **Join the Apple Developer Program** (paid, yearly). A free Apple ID can sign for development only.
 2. **Make a "Developer ID Application" certificate.** Xcode → Settings → Accounts → your team → Manage Certificates →
-   + → Developer ID Application. Then `security find-identity -v -p codesigning` lists it as
+   + → Developer ID Application. `security find-identity -v -p codesigning` then lists it as
    `Developer ID Application: Your Name (TEAMID)`.
-3. **Store notarization credentials in the keychain.** Make an app-specific password at account.apple.com
-   (Sign-In and Security → App-Specific Passwords), then run the command below and type the password when asked.
-   Nothing is written to the repo.
+3. **Export it**: Keychain Access → My Certificates → right-click the certificate → Export → `.p12`, with a password.
+   Then `base64 -i developer-id.p12 | pbcopy`.
+4. **Make an app-specific password** at account.apple.com (Sign-In and Security → App-Specific Passwords).
+5. **Add five secrets** in the repository: Settings → Secrets and variables → Actions → New repository secret. You
+   type them in; nothing is ever written to the repo.
 
-   ```bash
-   xcrun notarytool store-credentials "brow-notary" --apple-id "you@example.com" --team-id "TEAMID"
-   ```
+   | Secret | Value |
+   |---|---|
+   | `DEVELOPER_ID_P12` | the base64 text of the `.p12` |
+   | `DEVELOPER_ID_P12_PASSWORD` | the password you gave the `.p12` |
+   | `DEVELOPER_ID_NAME` | `Developer ID Application: Your Name (TEAMID)` |
+   | `NOTARY_APPLE_ID` | the Apple ID email |
+   | `NOTARY_TEAM_ID` | the Team ID |
+   | `NOTARY_PASSWORD` | the app-specific password from step 4 |
 
-4. **Tell the Makefile who you are**, in `Makefile.local` (it is not committed):
+   (With all six set, the next release is notarized. If any is missing the workflow makes the plain image and says so
+   in its log.)
+6. **Try it first** with Actions → Release → Run workflow, then download the artifact and open it on another Mac. Then
+   publish a release (a pre-release is a fine first one).
 
-   ```make
-   SIGN_ID        := Apple Development: Your Name (TEAMID)
-   DEVELOPER_ID   := Developer ID Application: Your Name (TEAMID)
-   NOTARY_PROFILE := brow-notary
-   ```
+### On your own Mac
 
-## Each release
+`make release` does the same by hand. Make the notarytool profile once (you type the password when asked):
 
-1. Raise `CFBundleShortVersionString` and `CFBundleVersion` in `Support/Info.plist`.
-2. `make test`, then `make hardened` and open `build/Brow.app` to look it over.
-3. `make release`. It takes a few minutes while Apple scans the zip.
-4. Before sharing, open the zip on another Mac (or a fresh user account) that has never run Brow: it should open with
-   no warning other than the one-time "downloaded from the internet" prompt, and ask for Calendar access once.
-5. Share `build/Brow-<version>.zip`, for example as a GitHub release.
+```bash
+xcrun notarytool store-credentials "brow-notary" --apple-id "you@example.com" --team-id "TEAMID"
+```
+
+and put this in `Makefile.local` (not committed):
+
+```make
+SIGN_ID        := Apple Development: Your Name (TEAMID)
+DEVELOPER_ID   := Developer ID Application: Your Name (TEAMID)
+NOTARY_PROFILE := brow-notary
+```
+
+`make release` signs the app (hardened runtime and `Support/Brow.entitlements`), makes the image, signs it, submits it
+to Apple and waits, staples the ticket and checks it with `spctl`. `make hardened` is the same signature on the app with
+your everyday identity, to see that it still works before spending a notarization (checked on 26 Nov 2026: it runs and
+shows Calendar events).
+
+## What is in the repo
+
+- Bundle id `dev.bosan.Brow` (`Support/Info.plist`). Changing it later makes macOS treat the app as a new one: the
+  Calendar permission and the login item would be asked for again. Settle it before the first notarized release.
+- `Support/Brow.entitlements`: the Calendar entitlement. The hardened runtime, which notarization requires, only lets an
+  app read Calendar with it. Nothing else is needed (no network, no sandbox, no scripting).
+- `scripts/make-dmg.sh`: wraps an app in a plain image (`hdiutil`, no extra tool).
+- `make dmg` and `make release`: as above. Neither has run in CI yet; `make dmg` was run and the image checked by
+  mounting it.
+- `.github/workflows/release.yml`: the workflow. The secrets path is written but has not run: it needs the account.
 
 ## If something goes wrong
 
+- **The workflow stops at the tag check.** The tag is not `v` plus the version in `Support/Info.plist`.
 - **Notarization says "Invalid".** `xcrun notarytool log <submission-id> --keychain-profile brow-notary` lists why,
   usually something unsigned inside the bundle or a missing hardened runtime flag.
-- **`make release` stops at "Set DEVELOPER_ID".** Step 4 above is missing.
-- **Calendar access is denied in the shared build.** The entitlement in `Support/Brow.entitlements` must be on the
-  signature: `codesign -d --entitlements - build/Brow.app` should list it.
+- **`make release` stops at "Set DEVELOPER_ID".** `DEVELOPER_ID` is not set (locally, `Makefile.local`).
+- **Calendar access is denied in the shared build.** The entitlement must be on the signature:
+  `codesign -d --entitlements - build/Brow.app` should list it.
 - **Open at login does not stick.** macOS is more reliable about login items for apps that live in `/Applications`.
 
 ## Homebrew
@@ -65,12 +112,12 @@ Brow is an app, so it goes in as a **cask** (a formula is for command-line tools
 
 ### What has to exist first
 
-1. **A notarized build.** Homebrew refuses casks for apps that fail Gatekeeper, so everything above comes first.
-2. **A public repository with a licence.** The cask downloads the zip from a GitHub release by URL, which a private
+1. **A notarized build.** Homebrew refuses casks for apps that fail Gatekeeper, so the plain image is not enough: it comes after "When there is an Apple Developer account".
+2. **A public repository with a licence.** The cask downloads the image from a GitHub release by URL, which a private
    repo cannot serve (`renodesper/brow` is private and has no licence at the time of writing). The licence also tells
    people, and Homebrew, on what terms they may use the app.
-3. **A GitHub release** named `v<version>` (for example `v0.2.0`) with `build/Brow-<version>.zip` attached. The
-   release tag, the `version` in `Support/Info.plist` and the zip's name must agree, since the cask builds the URL
+3. **A GitHub release** named `v<version>` (for example `v0.2.0`) with `Brow-<version>.dmg` attached (the workflow does this). The
+   release tag, the `version` in `Support/Info.plist` and the image's name must agree, since the cask builds the URL
    from `version`.
 
 ### Two places to publish it
@@ -91,7 +138,7 @@ Brow is an app, so it goes in as a **cask** (a formula is for command-line tools
 ```bash
 brew tap-new renodesper/brow                                     # makes a local tap with the right layout
 cp docs/homebrew/brow.rb "$(brew --repository renodesper/brow)/Casks/brow.rb"
-shasum -a 256 build/Brow-0.2.0.zip                               # put the result in `sha256`
+shasum -a 256 build/Brow-0.2.0.dmg                               # put the result in `sha256`
 cd "$(brew --repository renodesper/brow)"                        # edit Casks/brow.rb: version and sha256
 brew audit --cask --new renodesper/brow/brow                     # style and structure checks
 brew install --cask renodesper/brow/brow                         # needs the release to be downloadable
@@ -103,7 +150,7 @@ has never had Brow, and check that it opens without a warning, asks for Calendar
 
 ### Each release
 
-Raise `version` and `sha256` in the cask, in the tap, once the new release's zip is up. `brew livecheck --cask brow`
+Raise `version` and `sha256` in the cask, in the tap, once the new release's image is up. `brew livecheck --cask brow`
 reports when the repository has a newer release than the cask. This can be automated later (a workflow in the tap
 that opens the pull request), but it is not needed for one app.
 

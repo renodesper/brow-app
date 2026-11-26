@@ -5,17 +5,19 @@ BINARY   := .build/release/Brow
 # identity:  make run SIGN_ID="Apple Development: you@example.com (TEAMID)"
 # Or put it once in Makefile.local (not committed):  SIGN_ID := Apple Development: you@example.com (TEAMID)
 # "security find-identity -v -p codesigning" lists the identities on this Mac.
-# For a release others can open (docs/RELEASING.md): your "Developer ID Application" identity, and the profile
-# made once with "xcrun notarytool store-credentials". Both also fit in Makefile.local.
+# For a release others can open without a warning (docs/RELEASING.md): your "Developer ID Application" identity,
+# and the profile made once with "xcrun notarytool store-credentials" (NOTARY_KEYCHAIN names the keychain it is in,
+# when that is not the default one). All three also fit in Makefile.local.
 -include Makefile.local
 SIGN_ID        ?= -
 DEVELOPER_ID   ?=
 NOTARY_PROFILE ?= brow-notary
+NOTARY_KEYCHAIN ?=
 ENTITLEMENTS   := Support/Brow.entitlements
 VERSION        := $(shell /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Support/Info.plist)
-ZIP            := build/Brow-$(VERSION).zip
+DMG            := build/Brow-$(VERSION).dmg
 
-.PHONY: build bundle app run hardened release test install clean
+.PHONY: build bundle app run hardened dmg release test install clean
 
 build:
 	swift build -c release
@@ -35,18 +37,26 @@ hardened: bundle
 	codesign --force --options runtime --timestamp=none --entitlements $(ENTITLEMENTS) --sign "$(SIGN_ID)" $(APP)
 	codesign --verify --strict --verbose=2 $(APP)
 
-# A notarized build, in build/Brow-<version>.zip. Needs DEVELOPER_ID and a notarytool profile; see docs/RELEASING.md.
+# A plain disk image, build/Brow-<version>.dmg, signed with SIGN_ID (ad-hoc unless you set one). Anyone who
+# downloads it sees Gatekeeper's warning until it is a notarized release (below). This is what the GitHub release
+# workflow publishes while there is no Developer ID.
+dmg: app
+	scripts/make-dmg.sh $(APP) $(DMG)
+
+# A notarized disk image, build/Brow-<version>.dmg: the app signed with the Developer ID (hardened runtime and
+# entitlements), the image signed too, notarized by Apple and stapled. Needs DEVELOPER_ID and a notarytool profile;
+# see docs/RELEASING.md.
 release: bundle
 	@test -n "$(DEVELOPER_ID)" || { echo 'Set DEVELOPER_ID (see docs/RELEASING.md)'; exit 1; }
 	codesign --force --options runtime --timestamp --entitlements $(ENTITLEMENTS) --sign "$(DEVELOPER_ID)" $(APP)
 	codesign --verify --strict --verbose=2 $(APP)
-	ditto -c -k --keepParent $(APP) $(ZIP)
-	xcrun notarytool submit $(ZIP) --keychain-profile "$(NOTARY_PROFILE)" --wait
-	xcrun stapler staple $(APP)
-	xcrun stapler validate $(APP)
-	spctl --assess --type execute --verbose $(APP)
-	ditto -c -k --keepParent $(APP) $(ZIP)
-	@echo "Ready to share: $(ZIP)"
+	scripts/make-dmg.sh $(APP) $(DMG)
+	codesign --force --timestamp --sign "$(DEVELOPER_ID)" $(DMG)
+	xcrun notarytool submit $(DMG) --keychain-profile "$(NOTARY_PROFILE)" $(if $(NOTARY_KEYCHAIN),--keychain "$(NOTARY_KEYCHAIN)") --wait
+	xcrun stapler staple $(DMG)
+	xcrun stapler validate $(DMG)
+	spctl --assess --type open --context context:primary-signature --verbose $(DMG)
+	@echo "Ready to share: $(DMG)"
 
 run: app
 	-pkill -x Brow
