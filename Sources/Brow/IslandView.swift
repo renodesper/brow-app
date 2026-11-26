@@ -14,6 +14,7 @@ struct IslandActions {
 struct IslandView: View {
     let model: AppModel
     let actions: IslandActions
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let island = model.island
@@ -47,8 +48,8 @@ struct IslandView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         // The window sits in the screen's unsafe area on purpose: the notch is the whole point.
         .ignoresSafeArea()
-        .animation(IslandLayout.animation, value: mode)
-        .animation(IslandLayout.animation, value: size)
+        .animation(IslandLayout.animation(reduceMotion: reduceMotion), value: mode)
+        .animation(IslandLayout.animation(reduceMotion: reduceMotion), value: size)
         .environment(\.colorScheme, .dark)
     }
 }
@@ -156,6 +157,7 @@ private struct CompactIsland: View {
 private struct OpenIsland: View {
     let model: AppModel
     let actions: IslandActions
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let island = model.island
@@ -179,7 +181,7 @@ private struct OpenIsland: View {
 
             ScreenView(screen: screen, model: model)
                 .id(screen.id)
-                .transition(.push(from: island.movedForward ? .trailing : .leading))
+                .transition(reduceMotion ? .opacity : .push(from: island.movedForward ? .trailing : .leading))
                 .padding(.top, IslandLayout.spacing)
                 .padding(.horizontal, 12)
                 .frame(maxWidth: .infinity)
@@ -202,7 +204,7 @@ private struct OpenIsland: View {
             }
         }
         .foregroundStyle(.white)
-        .animation(IslandLayout.animation, value: island.screenIndex)
+        .animation(IslandLayout.animation(reduceMotion: reduceMotion), value: island.screenIndex)
     }
 
     private static func batterySymbol(for percent: Int) -> String {

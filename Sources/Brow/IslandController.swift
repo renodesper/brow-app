@@ -219,8 +219,9 @@ final class IslandController {
         let grown = CGSize(width: max(current.width, room.width), height: max(current.height, room.height))
         setFrame(size: grown, notch: notch, screen: screen)
         pendingShrink?.cancel()
+        let settling = IslandLayout.settlingDuration(reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
         pendingShrink = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(IslandLayout.settlingDuration))
+            try? await Task.sleep(for: .seconds(settling))
             guard !Task.isCancelled, let self else { return }
             self.setFrame(size: self.model.islandSize, notch: notch, screen: screen)
         }
