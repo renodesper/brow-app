@@ -51,6 +51,8 @@ none of it has been looked at on a notched MacBook yet.
 | 5. Right-click menu (#25) | The Keep Awake submenu lists all nine lengths and Indefinitely |
 | 6. Header (#25) | The open island shows the date only; the battery label and the read on every open are removed. Keep Awake's battery cut-off is unchanged |
 
+Afterwards (settings polish): Calendar access is a switch (off takes you to System Settings, since only it can revoke access); AI Usage no longer shows the green dot and "Updated hh:mm"; notes under sections are left-aligned; the Pomodoro steppers sit to the right of their values.
+
 Not done from the v2 spec: −0.5 tracking on the big card numbers, and the calendar glyph beside the notch is still a
 coloured tile rather than a bare glyph. To check on a Mac, in both light and dark: every Settings pane, the
 Screens thumbnails, the calendar checkboxes and the island cards and peeks.
