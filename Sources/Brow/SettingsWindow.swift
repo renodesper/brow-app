@@ -127,15 +127,20 @@ private struct ToggleRow: View {
     }
 }
 
-/// A small coloured dot before a status word, like "Allowed".
-private struct StatusDotStyle: LabelStyle {
-    let color: Color
+/// The note under a section, left-aligned with the rows above it.
+private struct FooterText: View {
+    let text: String
 
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 5) {
-            configuration.icon.font(.system(size: 7)).foregroundStyle(color)
-            configuration.title
-        }
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -148,8 +153,9 @@ private struct StepperRow: View {
 
     var body: some View {
         LabeledContent(title) {
-            Stepper(value: $value, in: range) {
+            HStack(spacing: 8) {
                 Text("\(value) \(unit)").monospacedDigit()
+                Stepper(title, value: $value, in: range).labelsHidden()
             }
         }
     }
@@ -187,7 +193,7 @@ private struct GeneralPane: View {
             } header: {
                 Text("Opening the island")
             } footer: {
-                Text(shortcut.map {
+                FooterText(shortcut.map {
                     "Right-click the island any time for Keep Awake, Pomodoro and these settings, or press \($0) from any app to open them."
                 } ?? "Right-click the island any time for Keep Awake, Pomodoro and these settings.")
             }
@@ -245,7 +251,7 @@ private struct GeneralPane: View {
         } header: {
             Text("Island size")
         } footer: {
-            Text("Detected on this Mac: \(Int(detected.width)) × \(Int(detected.height)) pt. A custom size is never smaller than the notch.")
+            FooterText("Detected on this Mac: \(Int(detected.width)) × \(Int(detected.height)) pt. A custom size is never smaller than the notch.")
         }
         .onChange(of: preferences.matchesNotch) { _, matches in
             // The first time a custom size is asked for, it starts a little larger than the notch.
@@ -310,7 +316,7 @@ private struct ScreensPane: View {
                     .padding(2)
                 }
             } footer: {
-                Text("The open island shows one screen at a time. Swipe left or right with two fingers on the island to move between them. Drag to change the order. Up to \(IslandScreens.maxCount) screens.")
+                FooterText("The open island shows one screen at a time. Swipe left or right with two fingers on the island to move between them. Drag to change the order. Up to \(IslandScreens.maxCount) screens.")
             }
             Section("Screen \(current + 1)") {
                 Picker("Layout", selection: Binding(
@@ -500,23 +506,11 @@ private struct CalendarPane: View {
         let shown = calendar.calendars.filter { !calendar.excludedCalendarIDs.contains($0.id) }.count
         Form {
             Section {
-                LabeledContent("Calendar access") {
-                    HStack(spacing: 10) {
-                        switch calendar.access {
-                        case .granted:
-                            Label("Allowed", systemImage: "circle.fill")
-                                .labelStyle(StatusDotStyle(color: .green))
-                        case .denied:
-                            Text("Not allowed").foregroundStyle(.secondary)
-                            Button("Open Privacy Settings") { openPrivacySettings() }
-                        case .notAsked:
-                            Text("Not asked yet").foregroundStyle(.secondary)
-                            Button("Allow Access…") { Task { await calendar.requestAccess() } }
-                        }
-                    }
-                }
+                Toggle("Calendar access", isOn: Binding(
+                    get: { calendar.access == .granted },
+                    set: { _ in changeAccess() }))
             } footer: {
-                Text("Change it in System Settings › Privacy & Security › Calendars.")
+                FooterText("Change it in System Settings › Privacy & Security › Calendars.")
             }
             Section("Beside the notch") {
                 ToggleRow(title: "Show upcoming events beside the notch",
@@ -548,10 +542,19 @@ private struct CalendarPane: View {
                     }
                 }
             } footer: {
-                Text("Pick the calendars the island uses. Events from unchecked ones don’t appear in the island or beside the notch.")
+                FooterText("Pick the calendars the island uses. Events from unchecked ones don’t appear in the island or beside the notch.")
             }
         }
         .onAppear { calendar.loadCalendars() }
+    }
+
+    /// Asks the first time; after that only System Settings can change it, so the switch takes you there.
+    private func changeAccess() {
+        if calendar.access == .notAsked {
+            Task { await calendar.requestAccess() }
+        } else {
+            openPrivacySettings()
+        }
     }
 
     private func openPrivacySettings() {
@@ -594,6 +597,7 @@ private struct AccountGroup: View {
                     }))
                 .toggleStyle(.checkbox)
                 .tint(info.color)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         } label: {
             HStack(spacing: 10) {
@@ -660,7 +664,7 @@ private struct KeepAwakePane: View {
                 }
                 .pickerStyle(.menu)
             } footer: {
-                Text("Outlined on the island’s Keep Awake card as the one to pick without thinking.")
+                FooterText("Outlined on the island’s Keep Awake card as the one to pick without thinking.")
             }
             Section {
                 ToggleRow(title: "Keep the display on",
@@ -677,7 +681,7 @@ private struct KeepAwakePane: View {
             } header: {
                 Text("Battery")
             } footer: {
-                Text("Only while running on battery.")
+                FooterText("Only while running on battery.")
             }
             Section("Beside the notch") {
                 ToggleRow(title: "Show the cup and time left while Keep Awake is on", isOn: $keepAwake.showsBesideNotch)
@@ -698,7 +702,6 @@ private struct UsagePane: View {
             Section {
                 source(name: "Claude Code",
                        isOn: Binding(get: { claudeConnected }, set: { _ in toggleClaude() }),
-                       isConnected: claudeConnected,
                        detail: "Shows your 5-hour and 7-day limits, read from Claude Code’s status line. Your own status line keeps working.",
                        note: "Turning this off puts your status line back exactly as it was.")
                 if let claudeError {
@@ -706,13 +709,12 @@ private struct UsagePane: View {
                 }
                 source(name: "Codex",
                        isOn: $usage.readsCodex,
-                       isConnected: usage.readsCodex,
                        detail: "Shows your 5-hour and weekly limits, read from Codex’s newest local session log. Nothing to set up.",
                        note: nil)
             } header: {
                 Text("Sources")
             } footer: {
-                Text("Limits are read from files on this Mac when the island opens. Nothing is sent over the network.")
+                FooterText("Limits are read from files on this Mac when the island opens. Nothing is sent over the network.")
             }
             Section("Display") {
                 ToggleRow(title: "Colour a limit amber from 80%", isOn: $usage.highlightsHighUse)
@@ -722,24 +724,9 @@ private struct UsagePane: View {
         .onAppear { claudeConnected = usage.isClaudeConnected }
     }
 
-    /// "Updated 09:48" once something has been read; the dot's accessibility label is "Connected".
-    private var updatedText: String {
-        guard let lastRead = usage.lastRead else { return "Waiting for data" }
-        return "Updated \(lastRead.formatted(date: .omitted, time: .shortened))"
-    }
-
-    private func source(name: String, isOn: Binding<Bool>, isConnected: Bool, detail: String,
-                        note: String?) -> some View {
+    private func source(name: String, isOn: Binding<Bool>, detail: String, note: String?) -> some View {
         Toggle(isOn: isOn) {
-            HStack(spacing: 8) {
-                Text(name)
-                if isConnected {
-                    Label(updatedText, systemImage: "circle.fill")
-                        .labelStyle(StatusDotStyle(color: .green))
-                        .font(.caption).foregroundStyle(.secondary)
-                        .accessibilityLabel("Connected. \(updatedText)")
-                }
-            }
+            Text(name)
             Text(detail).font(.caption).foregroundStyle(.secondary)
             if let note {
                 Text(note).font(.caption).foregroundStyle(.tertiary)
