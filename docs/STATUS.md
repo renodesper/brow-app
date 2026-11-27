@@ -39,29 +39,86 @@ Size: about 3,440 lines of code in 17 files (2,780 in the app, 660 in `BrowCore`
 ## 27 Nov 2026: hiding over full-screen apps
 
 Settings → General → "Show over full-screen apps": **Never** (default), **Only for alerts**, **Always**. Written,
-compiled, and 17 unit tests cover the decision and the detection (`BrowCore/FullScreenVisibility.swift`); 85 tests
-pass in all.
+compiled, and covered by unit tests of the decision and the detection (`BrowCore/FullScreenVisibility.swift`); 87 tests
+pass in all. Partly checked by hand, see below.
 
-What was tried first, all with public API and none of it enough: removing `.fullScreenAuxiliary`, replacing
-`.canJoinAllSpaces` with `.moveToActiveSpace` plus `NSWorkspace.activeSpaceDidChangeNotification`, and a different
-window level (`.mainMenu` put the island behind the menu bar). The panel stayed visible over a full-screen app each
-time, so collection behavior alone does not hide it. Those tests were first run on a maximised window and not on a
-real full-screen Space (the green button fills the screen rather than entering full screen on this macOS; use
-Ctrl+Cmd+F), so treat the negative results as unreliable.
+### What it does
 
-What it does now: on a Space change or when another app is activated (and once more 700 ms later, while the
-transition settles), each island asks `CGWindowListCopyWindowInfo` for the on-screen windows and checks whether
-another app has one that fills its display. On a notched display an app in full screen fills the area below the notch
-(Y=44, height 1286 on a 2048 x 1330 display with a 43.5 pt inset), so that shape counts too. Nothing polls. The panel is
-ordered out or in; `.fullScreenAuxiliary` is on only in Always mode, and in Only for alerts while a peek is showing.
+On a Space change, when another app is activated, or when the panel's own occlusion changes (and ten more times over
+the next 2 s, since the window list can lag the notification), each island asks `CGWindowListCopyWindowInfo` for the
+on-screen windows and checks whether another app has one that fills its display. Nothing polls and no private API is
+used. Only windows below the menu bar's layer (24) count, so overlays do not.
 
-Checked by hand (built-in notched display, Never): Safari in full screen (Ctrl+Cmd+F) hides the island.
-Not checked: returning to a desktop Space, several desktop Spaces, full screen on the external display, a Keynote
-slideshow, a maximised or tiled window staying visible, Only for alerts showing a peek over full screen (and whether
-a changed collection behavior needs the order-out and order-in the code does), and Always.
+- A full-screen app on a notched display fills the area below the notch (Y=44, height 1286 on a 2048 x 1330 display
+  with a 43.5 pt inset), not the whole display, so both shapes count. A maximised window sat at Y=45, which is why the
+  tolerance is 0.75 pt.
+- When a full-screen app is seen, the island stays for 0.3 s, then shrinks up into the top of the screen over 0.25 s
+  and its drawing goes (`IslandState.isTucked`, in `IslandView`). It grows back out over 0.35 s when the full-screen
+  app is gone. The answer must stay "hide" for the whole 0.3 s, so a stale reading of the window list cannot make it
+  blink. Reduce Motion uses a short fade. The panel stays ordered in on every Space and lets clicks through while the
+  island is tucked.
+- `.fullScreenAuxiliary` is on only in Always mode, and in Only for alerts while a peek is showing (the panel is
+  ordered out and in when that changes).
+- The look follows a reference clip of another notch app: its pill stays through the Space slide, shrinks to a dot and
+  grows back. Brow's version shrinks toward the top edge instead of to a dot. The owner judged the result smooth.
 
-Known limit: on a notched display a maximised window and a full-screen one differ by about 1 pt of position. A window
-manager that fills exactly the area below the menu bar (Rectangle's Maximize, say) may be taken for full screen.
+### The issue
+
+Nothing public tells an app that a Space swipe, or a full-screen toggle, has started. The Space-change event arrives
+when the transition has ended, and entering full screen from the same app sends no app-activation at all. So the
+island is on screen for the length of the animation, about 0.5 s, and can only react after it. The detection hides it
+within about 10 ms of the event; the hold and the shrink make that read as intended and not as a blink.
+
+### What we tried
+
+| Try | Result |
+|---|---|
+| Remove `.fullScreenAuxiliary`, keep `.canJoinAllSpaces` | The island stayed visible over a full-screen Safari (seen with Ctrl+Cmd+F). The first test may have been on a maximised window: the green button fills the screen on this macOS and does not enter full screen. |
+| `.moveToActiveSpace` without `.canJoinAllSpaces`, `activeSpaceDidChangeNotification` to bring it onto each desktop Space | Still visible in full screen (first test unreliable; repeated in real full screen with detection off: always visible, and on desktops it only showed after the swipe settled). |
+| Window level `.mainMenu` | Still visible in full screen, and the island dropped behind the menu bar. Back to `.statusBar`. |
+| `NSApplication.currentSystemPresentationOptions` with KVO | Never changed (always 0) for an accessory app. Not usable. |
+| A global `NSEvent` monitor for gestures and scrolls, to catch a swipe start | Received nothing during 3-finger Space swipes. |
+| Window-list check, exact display size | Never matched: a full-screen app on a notched display is 44 pt shorter. Fixed with the below-the-notch shape. |
+| A single re-check after the Space event, then a few at 0.3 to 4 s | The list lags the event; a short burst of ten re-checks over 2 s works. |
+| Hiding with `orderOut`, showing with `orderFrontRegardless` | Ordering the panel in during a Space change is silently lost, so the island stayed missing after leaving full screen. The panel now stays ordered in. |
+| Hiding with `alphaValue` and `NSAnimationContext` | The fade never showed in a recording: a hard cut. Replaced with the island's own shrink. |
+| Counting any display-sized window | The screen recorder's overlays (`screencapture` at layer 1498, `Screenshot` at layer 24) and an overlay of the Claude app (layer 1000) covered the displays and hid the island while recording. Only layers below 24 count now. |
+
+Measured along the way: `activeSpaceDidChangeNotification` reaches Brow (it did not reach a standalone script), the
+panel's occlusion change sometimes arrives before the app-activation, and the window list can show full screen up to a
+few seconds before Safari's activation event arrives.
+
+### What we have not tried
+
+- **The private SkyLight Space API** (`SLSSpaceGetType`, as other notch apps use). Excluded by "no private APIs"
+  (ADR-002); it could give the exact Space type and possibly an earlier signal. Needs the owner's say.
+- **The Accessibility API** (`AXFullScreen` on the front window). Exact, but needs the Accessibility permission, which
+  Brow does not ask for.
+- **A key or event tap** for Ctrl+Cmd+F and the green button, to hide before the transition. Needs Input Monitoring
+  and would only cover those two ways in, not a swipe.
+- **Comparing `NSScreen.visibleFrame` with `frame`** to tell a hidden menu bar. A heuristic that also fires for an
+  auto-hiding menu bar; not tried.
+- Other collection behaviors (`.transient`, `.fullScreenNone`, `.fullScreenDisallowsTiling`) and other window levels
+  than `.mainMenu`. Not expected to help, since the panel is on every Space on purpose.
+
+### Checked by hand
+
+Built-in notched display, Never: Safari in full screen (Ctrl+Cmd+F) hides the island, and swiping from it to a desktop
+Space brings it back with no relaunch. The shrink and grow-back were compared with the reference clip by screen
+recordings and judged smooth.
+
+Not checked: the screen recorder no longer hiding the island (fixed after it was seen, not re-tested), several
+desktop Spaces, full screen on the external display, a Keynote slideshow (its window layer is not known; the rule is
+layers 0 to 23), a maximised or tiled window keeping the island, Only for alerts showing a peek over full screen (and
+whether a changed collection behavior needs the order-out and order-in the code does), Always, Stage Manager, and
+several apps in full screen at once.
+
+### Known limits
+
+- The island is on screen for the length of the Space animation when full screen is entered or re-entered.
+- On a notched display a maximised window and a full-screen one differ by about 1 pt of position. A window manager
+  that fills exactly the area below the menu bar (Rectangle's Maximize, say) may be taken for full screen.
+- Any other overlay below layer 24 that fills a display would count.
 
 ## 26 Nov 2026: v2, the native macOS look
 

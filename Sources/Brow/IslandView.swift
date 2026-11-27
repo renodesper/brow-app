@@ -60,7 +60,11 @@ struct IslandView: View {
         .frame(width: size.width, height: size.height, alignment: .top)
         .background(shape.fill(Color.black))
         .clipShape(shape)
-        .opacity(isVisible ? 1 : 0)
+        .opacity(isVisible && !island.isTucked ? 1 : 0)
+        // Tucked away, the island shrinks up into the top of the screen, and grows back out of it.
+        .scaleEffect(reduceMotion || !island.isTucked ? 1 : 0.05, anchor: .top)
+        .animation(reduceMotion ? .easeOut(duration: 0.15)
+                   : island.isTucked ? .easeIn(duration: 0.25) : .easeOut(duration: 0.35), value: island.isTucked)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         // The window sits in the screen's unsafe area on purpose: the notch is the whole point.
         .ignoresSafeArea()
