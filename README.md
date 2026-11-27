@@ -58,8 +58,8 @@ with two fingers to see the others. When something is running, a little of it st
 
 | To | Do this |
 |---|---|
-| Open the island | Click the notch, or turn on Settings → General → "Open when the pointer rests on the notch" and rest the pointer there. |
-| Change screen | Swipe left or right with two fingers on the open island, or click a dot. |
+| Open the island | Rest the pointer on the notch, or click it. To open it only on a click, turn off Settings → General → "Open when the pointer rests on the notch". |
+| Change screen | Swipe left or right with two fingers on the open island, drag it left or right with the mouse, or click a dot. |
 | Keep Awake, Pomodoro, Settings, Quit | **Right-click** the island. |
 | Open Settings from anywhere | **⌃⌥⌘,** (Control-Option-Command-Comma). It needs no permission. If another app already holds that combination, Brow has no shortcut and the Settings text does not mention one. |
 | Open Settings the usual way | Open Brow again from Finder or Spotlight. |
