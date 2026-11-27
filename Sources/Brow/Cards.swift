@@ -336,6 +336,7 @@ struct CalendarCard: View {
                 }
             }
         }
+        .opensCalendarApp()
     }
 }
 
@@ -391,6 +392,7 @@ struct CalendarWideCard: View {
                 }
             }
         }
+        .opensCalendarApp()
     }
 }
 
@@ -454,6 +456,20 @@ private struct JoinButtonStyle: ButtonStyle {
                 .contentShape(Capsule())
                 .modifier(PressFeedback(isPressed: configuration.isPressed, litByHover: false))
         }
+    }
+}
+
+extension View {
+    /// A click anywhere on the card, other than on a button in it, opens the Calendar app.
+    fileprivate func opensCalendarApp() -> some View {
+        contentShape(Rectangle())
+            .onTapGesture {
+                let calendarApp = "com.apple.iCal"
+                guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: calendarApp) else { return }
+                NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+            }
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint("Opens the Calendar app")
     }
 }
 
