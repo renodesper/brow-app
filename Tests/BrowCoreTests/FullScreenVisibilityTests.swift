@@ -40,8 +40,18 @@ final class FullScreenVisibilityTests: XCTestCase {
         XCTAssertFalse(FullScreenDetection.covers(display: display, topInset: 0, windows: [window(alpha: 0)], ignoring: 1))
     }
 
-    func testAPresentationAboveTheNormalLayerCounts() {
-        XCTAssertTrue(FullScreenDetection.covers(display: display, topInset: 0, windows: [window("Keynote", layer: 25)], ignoring: 1))
+    func testAWindowJustAboveTheNormalLayerStillCounts() {
+        XCTAssertTrue(FullScreenDetection.covers(display: display, topInset: 0, windows: [window("Keynote", layer: 3)], ignoring: 1))
+    }
+
+    // Measured while the screen recorder ran: its overlays covered the display without any app in full screen.
+    func testTheScreenRecordersOverlaysAreNot() {
+        XCTAssertFalse(FullScreenDetection.covers(display: display, topInset: 0, windows: [window("screencapture", layer: 1498)], ignoring: 1))
+        XCTAssertFalse(FullScreenDetection.covers(display: display, topInset: 0, windows: [window("Screenshot", layer: 24)], ignoring: 1))
+    }
+
+    func testAnyOverlayAtOrAboveTheMenuBarIsNot() {
+        XCTAssertFalse(FullScreenDetection.covers(display: display, topInset: 0, windows: [window("Claude", layer: 1000)], ignoring: 1))
     }
 
     func testAHalfPointOffIsTheSameSize() {

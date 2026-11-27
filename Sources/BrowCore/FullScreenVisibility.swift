@@ -53,6 +53,11 @@ public enum FullScreenDetection {
     /// Owners whose display-sized windows are part of the system's own drawing, not an app in full screen.
     static let systemOwners: Set<String> = ["Dock", "Window Server", "WindowManager", "Control Center"]
 
+    /// The layer of the menu bar. An app in full screen is an ordinary window at layer 0; what sits at or above the
+    /// menu bar's layer is an overlay (the screen recorder's, a screenshot's, a pointer highlight), which covers a
+    /// display for a while without being an app in full screen.
+    static let menuBarLayer = 24
+
     /// How far an edge may be off the expected one and still count as the same, in points. Window bounds are
     /// reported in whole points while the notch's inset is not (43.5 on a 14-inch MacBook Pro at one scaling),
     /// and a maximised window sits at least a point lower than a full-screen one, so this stays below 1.
@@ -66,7 +71,7 @@ public enum FullScreenDetection {
                                 width: display.width, height: display.height - topInset)
         return windows.contains { window in
             window.ownerPID != ownPID
-                && window.layer >= 0
+                && window.layer >= 0 && window.layer < menuBarLayer
                 && window.alpha > 0
                 && !systemOwners.contains(window.ownerName)
                 && (isSame(window.bounds, display) || (topInset > 0 && isSame(window.bounds, belowNotch)))
