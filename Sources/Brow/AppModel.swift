@@ -139,20 +139,22 @@ enum IslandLayout {
     static let dotsHeight: CGFloat = 28
 
     /// How long the pointer may be outside the island before it closes. Coming back within it keeps it open.
-    static let closeGrace: Duration = .milliseconds(280)
+    static let closeGrace: Duration = .milliseconds(200)
 
-    /// The one spring every change of the island's size or content follows, so the shape and the cards settle
-    /// together.
-    static let spring = Spring(duration: 0.35, bounce: 0.15)
+    /// The spring every change of the island's size or content follows, so the shape and the cards settle
+    /// together. Growing keeps a little bounce.
+    static let spring = Spring(duration: 0.5, bounce: 0.12)
+    /// Closing has no bounce: a shape that shrinks past its size and back looks like a stutter.
+    static let closingSpring = Spring(duration: 0.55, bounce: 0)
     /// With Reduce Motion on, the island changes with a short fade instead of the spring.
     static let reducedDuration = 0.15
 
-    static func animation(reduceMotion: Bool) -> Animation {
-        reduceMotion ? .easeOut(duration: reducedDuration) : .spring(spring)
+    static func animation(reduceMotion: Bool, closing: Bool = false) -> Animation {
+        reduceMotion ? .easeOut(duration: reducedDuration) : .spring(closing ? closingSpring : spring)
     }
-    /// How long the spring takes to come to rest. The window must not shrink before then.
+    /// How long the springs take to come to rest. The window must not shrink before then.
     static func settlingDuration(reduceMotion: Bool) -> TimeInterval {
-        reduceMotion ? reducedDuration : spring.settlingDuration
+        reduceMotion ? reducedDuration : max(spring.settlingDuration, closingSpring.settlingDuration)
     }
     /// Room beyond the island at the sides and below it while it animates, so a spring that overshoots is not
     /// cut off by the window. The top has none: the island hangs from the top of the screen.

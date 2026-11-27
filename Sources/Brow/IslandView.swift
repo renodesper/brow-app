@@ -26,7 +26,7 @@ struct IslandView: View {
             .animation(.easeOut(duration: 0.26).delay(0.07))
         let leave = AnyTransition.opacity
             .combined(with: .scale(scale: 0.97, anchor: .top))
-            .animation(.easeIn(duration: 0.12))
+            .animation(.easeIn(duration: 0.18))
         return .asymmetric(insertion: arrive, removal: leave)
     }
 
@@ -64,8 +64,8 @@ struct IslandView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         // The window sits in the screen's unsafe area on purpose: the notch is the whole point.
         .ignoresSafeArea()
-        .animation(IslandLayout.animation(reduceMotion: reduceMotion), value: mode)
-        .animation(IslandLayout.animation(reduceMotion: reduceMotion), value: size)
+        .animation(IslandLayout.animation(reduceMotion: reduceMotion, closing: mode == .closed), value: mode)
+        .animation(IslandLayout.animation(reduceMotion: reduceMotion, closing: mode == .closed), value: size)
         .environment(\.colorScheme, .dark)
     }
 }
