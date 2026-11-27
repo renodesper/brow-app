@@ -29,8 +29,9 @@
   <a href="#where-things-are">Where things are</a>
 </p>
 
-Rest the pointer on the notch (or click it, if you prefer) and it opens into a screen of cards. Swipe left or right
-with two fingers to see the others. When something is running, a little of it stays beside the notch.
+Rest the pointer on the notch (or click it) and it opens into a screen of cards. Swipe left or right with two
+fingers, or drag with the mouse, to see the others. When something is running, a little of it stays beside the notch.
+It hides itself while an app is in full screen.
 
 ## What it does
 
@@ -39,9 +40,10 @@ with two fingers to see the others. When something is running, a little of it st
 | ⏱ **Pomodoro** | Focus, short break, and a long break after every few focus rounds. Start, pause, skip, start over. A ring and the time left rest beside the notch while it runs, and the island opens a little when a phase ends, with Start Break and Skip Break. |
 | ☕ **Keep Awake** | Keeps the Mac awake, and the display on unless you choose otherwise, for 30 minutes, 1 hour, 2 hours or until you turn it off (the right-click menu has more lengths). Can turn itself off when the battery runs low. |
 | 📊 **AI Usage** | How much of your Claude Code and Codex limits you have used, and when they start over. Read from files on your Mac. |
-| 📅 **Calendar** | Your next events today and tomorrow, from the calendars macOS already knows. An event shows beside the notch from 15 minutes before it starts ("in 12m", then "Now"), and the island opens for a moment as it starts. A Join button appears on events with a Zoom, Google Meet, Microsoft Teams or Webex link. |
+| 📅 **Calendar** | Your next events today and tomorrow, from the calendars macOS already knows. An event shows beside the notch from 15 minutes before it starts ("in 12m", then "Now"), and the island opens for a moment as it starts. A Join button appears on events with a Zoom, Google Meet, Microsoft Teams or Webex link, and a click on the card opens the Calendar app. |
 | 🖥 **Every display** | One island per display, each opening on its own, all showing the same timers and events. Turn any of them off in Settings. A display without a notch keeps a small pill at the top, so there is something to point at. |
-| 🎛 **Your screens** | Up to five screens of cards. Each screen shows one card across, two side by side, or four in a grid, with the cards you pick. |
+| 🎛 **Your screens** | Up to five screens of cards. Each screen shows one card across, two side by side, or four in a grid, with the cards you pick. Change screen with a two-finger swipe, a drag of the mouse, or the dots. |
+| 🎬 **Full-screen apps** | While a video, Safari or another app is in full screen on a display, its island shrinks away into the top of the screen and comes back when you leave. Settings can let alerts through, or keep the island showing. |
 
 <table>
   <tr>
@@ -58,7 +60,7 @@ with two fingers to see the others. When something is running, a little of it st
 
 | To | Do this |
 |---|---|
-| Open the island | Rest the pointer on the notch, or click it. To open it only on a click, turn off Settings → General → "Open when the pointer rests on the notch". |
+| Open the island | Rest the pointer on the notch, or click it. To open it only on a click, turn off Settings → General → "Open when the pointer rests on the notch". When Brow starts, the island opens for a moment to say it is running. |
 | Change screen | Swipe left or right with two fingers on the open island, drag it left or right with the mouse, or click a dot. |
 | Keep Awake, Pomodoro, Settings, Quit | **Right-click** the island. |
 | Open Settings from anywhere | **⌃⌥⌘,** (Control-Option-Command-Comma). It needs no permission. If another app already holds that combination, Brow has no shortcut and the Settings text does not mention one. |
@@ -92,6 +94,8 @@ Settings follows light and dark mode (these are dark). Nothing here needs a logi
 Settings → General → **Show over full-screen apps** decides what the island does while an app is in full screen
 on its display (a video, Safari, a Keynote slideshow): **Never** hides it (the default), **Only for alerts** hides it
 but lets a peek through, such as a meeting starting or a Pomodoro session ending, and **Always** keeps it showing.
+The island is on screen for the half second the switch into full screen takes, and then shrinks away: macOS does
+not say sooner that it has begun. See [docs/STATUS.md](docs/STATUS.md) for how this works and what was tried.
 
 <table>
   <tr>
@@ -149,6 +153,8 @@ secrets exist). See [docs/RELEASING.md](docs/RELEASING.md).
 - **One window per display.** Its frame is the island's own frame, so it never takes a click meant for something else.
 - **Lazy.** The calendar store is created the first time it is needed: at launch once you have allowed access
   and events show beside the notch, otherwise never. Turn that off under Settings → Calendar to save its few megabytes.
+- **Full screen is looked for only when something changes.** When the Space or the active app changes, the island
+  reads the list of on-screen windows a few times over two seconds (it lags the change), and then stops.
 - **No private APIs, no network, no login tokens.**
 
 ## AI usage: where the numbers come from
@@ -169,11 +175,12 @@ Sources/BrowCore/          Logic with no UI, covered by Tests/
   Agenda.swift             Which event shows beside the notch, and when that next changes
   Usage.swift              Parsing of Claude Code's and Codex's own limit reports
   StatusLineHook.swift     Connecting and disconnecting Claude Code's status line
-  IslandScreens.swift      The open island's screens and the two-finger swipe, as plain values
+  IslandScreens.swift      The open island's screens and the swipe (two fingers or mouse drag), as plain values
+  FullScreenVisibility.swift  Whether an app in full screen covers a display, and when the island shows
 Sources/Brow/              The app
   BrowApp.swift            Entry point
   IslandDisplays.swift     One island per display, following displays being plugged in and out
-  IslandController.swift   One island's window: where it sits, hover, click, right-click, swipe, opening and closing
+  IslandController.swift   One island's window: where it sits, hover, click, right-click, swipe and drag, opening and closing, hiding in full screen
   IslandView.swift         The island's shape, the closed, peeking and open layouts, the colours
   Cards.swift              The four cards, and the calendar's wide card for a screen of its own
   IslandMenu.swift         The right-click menu
@@ -194,8 +201,8 @@ To add a feature: write an `@Observable` model, add it to `AppModel`, add a case
 
 ## Not built
 
-Usage warnings at a threshold, other AI tools, hiding over full-screen apps, and "time to leave" (it needs your
-location and a route lookup). See [docs/STATUS.md](docs/STATUS.md) for the whole picture.
+Usage warnings at a threshold, other AI tools, and "time to leave" (it needs your location and a route lookup).
+The island cannot hide before a switch into full screen has finished, because macOS does not say sooner. See [docs/STATUS.md](docs/STATUS.md) for the whole picture.
 
 ## License
 
