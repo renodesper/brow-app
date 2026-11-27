@@ -198,6 +198,7 @@ private struct GeneralPane: View {
                     "Right-click the island any time for Keep Awake, Pomodoro and these settings, or press \($0) from any app to open them."
                 } ?? "Right-click the island any time for Keep Awake, Pomodoro and these settings.")
             }
+            fullScreen
             displays
             islandSize
             Section("Beside the notch") {
@@ -205,6 +206,18 @@ private struct GeneralPane: View {
                           detail: "Event countdown, Pomodoro time and Keep Awake while they run. Each can be turned off in its own section.",
                           isOn: $preferences.showsLiveActivities)
             }
+        }
+    }
+
+    private var fullScreen: some View {
+        Section {
+            Picker("Show over full-screen apps", selection: $preferences.fullScreenMode) {
+                Text("Never").tag(FullScreenMode.never)
+                Text("Only for alerts").tag(FullScreenMode.alerts)
+                Text("Always").tag(FullScreenMode.always)
+            }
+        } footer: {
+            FooterText("Alerts are a meeting starting or a Pomodoro session ending: the island appears for a moment, then hides again.")
         }
     }
 

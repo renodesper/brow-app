@@ -89,6 +89,10 @@ the app: your own status line is put back exactly as it was (a backup sits besid
 
 Settings follows light and dark mode (these are dark). Nothing here needs a login or the network.
 
+Settings → General → **Show over full-screen apps** decides what the island does while an app is in full screen
+on its display (a video, Safari, a Keynote slideshow): **Never** hides it (the default), **Only for alerts** hides it
+but lets a peek through, such as a meeting starting or a Pomodoro session ending, and **Always** keeps it showing.
+
 <table>
   <tr>
     <td align="center"><img src="docs/images/settings-general.png" width="400" alt="General settings"><br><sub>General</sub></td>
