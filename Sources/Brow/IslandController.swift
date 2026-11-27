@@ -27,6 +27,10 @@ final class IslandController {
     private var pendingShrink: Task<Void, Never>?
     private var pendingPeekEnd: Task<Void, Never>?
     private var screenObserver: NSObjectProtocol?
+    private var spaceObservers: [NSObjectProtocol] = []
+    private var pendingFullScreenCheck: Task<Void, Never>?
+    /// Whether an app in full screen covers this island's display, as of the last check.
+    private var isCovered = false
     private var eventMonitors: [Any] = []
     private var swipe = SwipeTracker()
     /// Whether the swipe in progress has already gone far enough to change screen, so the tap is felt once.
@@ -62,10 +66,19 @@ final class IslandController {
         ) { [weak self] _ in
             Task { @MainActor in self?.layout() }
         }
+        // Nothing here polls: the check runs when the Space or the active app changes, and when a setting or a
+        // peek changes what should show.
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.activeSpaceDidChangeNotification, NSWorkspace.didActivateApplicationNotification] {
+            spaceObservers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                Task { @MainActor in self?.fullScreenMayHaveChanged() }
+            })
+        }
         installEventMonitors()
         layout()
         followSize()
-        panel.orderFrontRegardless()
+        followVisibility()
+        refreshFullScreen()
     }
 
     /// Takes the island off the screen and stops listening, for a display that was turned off or unplugged.
@@ -76,6 +89,9 @@ final class IslandController {
         pendingPeekEnd?.cancel()
         if let screenObserver { NotificationCenter.default.removeObserver(screenObserver) }
         screenObserver = nil
+        pendingFullScreenCheck?.cancel()
+        spaceObservers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
+        spaceObservers = []
         eventMonitors.forEach { NSEvent.removeMonitor($0) }
         eventMonitors = []
         panel.orderOut(nil)
@@ -264,6 +280,72 @@ final class IslandController {
         }
     }
 
+    // MARK: Full screen
+
+    /// A Space or app change is announced before the window list shows it, so the check runs again once the
+    /// transition has settled.
+    private func fullScreenMayHaveChanged() {
+        refreshFullScreen()
+        pendingFullScreenCheck?.cancel()
+        pendingFullScreenCheck = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(700))
+            guard !Task.isCancelled else { return }
+            self?.refreshFullScreen()
+        }
+    }
+
+    /// Shows or hides the panel as the setting, a peek and any full-screen app on this display say.
+    private func refreshFullScreen() {
+        let mode = model.preferences.fullScreenMode
+        // Nothing to ask the window server when the island shows over full screen anyway.
+        isCovered = mode != .always && isFullScreenAppCovering()
+        let peeking = model.island.peek != nil
+        let allowed = mode.needsFullScreenAuxiliary(peeking: peeking)
+        let changed = panel.allowsFullScreen != allowed
+        panel.allowsFullScreen = allowed
+        guard mode.showsIsland(covered: isCovered, peeking: peeking) else {
+            if panel.isVisible { panel.orderOut(nil) }
+            return
+        }
+        // A changed collection behavior only counts for a window ordered in afresh.
+        if changed, panel.isVisible { panel.orderOut(nil) }
+        panel.orderFrontRegardless()
+    }
+
+    /// Whether another app has a window the size of this display on the Space now showing on it.
+    private func isFullScreenAppCovering() -> Bool {
+        guard let screen = NSScreen.screens.first(where: { $0.displayUUID == displayID }),
+              let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber,
+              let list = CGWindowListCopyWindowInfo(.optionOnScreenOnly, kCGNullWindowID) as? [[String: Any]]
+        else { return false }
+        let windows = list.compactMap { info -> FullScreenDetection.Window? in
+            guard let pid = info[kCGWindowOwnerPID as String] as? Int32,
+                  let layer = info[kCGWindowLayer as String] as? Int,
+                  let boundsInfo = info[kCGWindowBounds as String] as? NSDictionary,
+                  let bounds = CGRect(dictionaryRepresentation: boundsInfo)
+            else { return nil }
+            return FullScreenDetection.Window(
+                ownerPID: pid, ownerName: info[kCGWindowOwnerName as String] as? String ?? "",
+                layer: layer, bounds: bounds, alpha: info[kCGWindowAlpha as String] as? Double ?? 1)
+        }
+        return FullScreenDetection.covers(
+            display: CGDisplayBounds(CGDirectDisplayID(number.uint32Value)), topInset: screen.safeAreaInsets.top,
+            windows: windows,
+            ignoring: ProcessInfo.processInfo.processIdentifier)
+    }
+
+    private func followVisibility() {
+        withObservationTracking {
+            _ = model.preferences.fullScreenMode
+            _ = model.island.peek
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                self?.refreshFullScreen()
+                self?.followVisibility()
+            }
+        }
+    }
+
     // MARK: The frame
 
     /// Fits the panel again whenever the island's size changes: opening, closing, peeking, another screen, or
@@ -358,7 +440,7 @@ private final class IslandPanel: NSPanel {
     init() {
         super.init(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         level = .statusBar
-        collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
+        collectionBehavior = Self.behavior(allowingFullScreen: false)
         isOpaque = false
         backgroundColor = .clear
         hasShadow = false
@@ -368,6 +450,20 @@ private final class IslandPanel: NSPanel {
         // frame, clear pixels included. Its frame is the island's own, so that is exactly what is wanted.
         ignoresMouseEvents = false
         appearance = NSAppearance(named: .darkAqua)
+    }
+
+    /// Whether the panel may show in an app's full-screen Space. Applies the next time the panel is ordered in.
+    var allowsFullScreen = false {
+        didSet {
+            guard allowsFullScreen != oldValue else { return }
+            collectionBehavior = Self.behavior(allowingFullScreen: allowsFullScreen)
+        }
+    }
+
+    private static func behavior(allowingFullScreen: Bool) -> NSWindow.CollectionBehavior {
+        var behavior: NSWindow.CollectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+        if allowingFullScreen { behavior.insert(.fullScreenAuxiliary) }
+        return behavior
     }
 
     override var canBecomeKey: Bool { false }

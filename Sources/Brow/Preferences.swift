@@ -87,6 +87,11 @@ final class IslandPreferences {
         }
     }
 
+    /// Whether the island shows over an app in full screen.
+    var fullScreenMode: FullScreenMode {
+        didSet { defaults.set(fullScreenMode.rawValue, forKey: Key.fullScreenMode) }
+    }
+
     @ObservationIgnored private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
@@ -104,6 +109,7 @@ final class IslandPreferences {
         lastScreen = defaults.integer(forKey: Key.lastScreen)
         hiddenDisplays = Set(defaults.stringArray(forKey: Key.hiddenDisplays) ?? [])
         showsPillWithoutNotch = defaults.bool(Key.showsPillWithoutNotch, default: true)
+        fullScreenMode = FullScreenMode(rawValue: defaults.string(forKey: Key.fullScreenMode) ?? "") ?? .never
     }
 
     private enum Key {
@@ -119,6 +125,7 @@ final class IslandPreferences {
         static let lastScreen = "island.lastScreen"
         static let hiddenDisplays = "island.hiddenDisplays"
         static let showsPillWithoutNotch = "island.showsPillWithoutNotch"
+        static let fullScreenMode = "island.fullScreenMode"
     }
 }
 
