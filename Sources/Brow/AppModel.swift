@@ -118,6 +118,9 @@ final class IslandState {
     /// Whether the pointer rests on the closed island, which then grows a little: it is about to open, or can be
     /// clicked open.
     var isAnticipating = false
+    /// Whether the island has shrunk away to nothing because an app is in full screen. The panel stays where it is;
+    /// only the drawing goes, so the island can shrink and grow back as one smooth motion.
+    var isTucked = false
 }
 
 /// The island's sizes, in points. The design was drawn at 1.25×, so its pixels are divided by 1.25 here.

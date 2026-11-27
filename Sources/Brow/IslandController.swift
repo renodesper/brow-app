@@ -31,6 +31,9 @@ final class IslandController {
     private var pendingFullScreenCheck: Task<Void, Never>?
     /// Whether an app in full screen covers this island's display, as of the last check.
     private var isCovered = false
+    /// Whether the panel is shown or fading out, as last asked.
+    private var isShown = true
+    private var pendingHide: Task<Void, Never>?
     private var eventMonitors: [Any] = []
     private var swipe = SwipeTracker()
     /// Whether the swipe in progress has already gone far enough to change screen, so the tap is felt once.
@@ -74,6 +77,12 @@ final class IslandController {
                 Task { @MainActor in self?.fullScreenMayHaveChanged() }
             })
         }
+        // The panel is on every Space, so its own visibility changes with the Space showing.
+        spaceObservers.append(NotificationCenter.default.addObserver(
+            forName: NSWindow.didChangeOcclusionStateNotification, object: panel, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.fullScreenMayHaveChanged() }
+        })
         installEventMonitors()
         layout()
         followSize()
@@ -90,7 +99,11 @@ final class IslandController {
         if let screenObserver { NotificationCenter.default.removeObserver(screenObserver) }
         screenObserver = nil
         pendingFullScreenCheck?.cancel()
-        spaceObservers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
+        pendingHide?.cancel()
+        spaceObservers.forEach {
+            NSWorkspace.shared.notificationCenter.removeObserver($0)
+            NotificationCenter.default.removeObserver($0)
+        }
         spaceObservers = []
         eventMonitors.forEach { NSEvent.removeMonitor($0) }
         eventMonitors = []
@@ -282,35 +295,78 @@ final class IslandController {
 
     // MARK: Full screen
 
-    /// A Space or app change is announced before the window list shows it, so the check runs again once the
-    /// transition has settled.
+    /// The waits between reads of the window list after a Space or app change, adding up to 30, 60, 100, 150, 220,
+    /// 300, 500, 800, 1200 and 2000 ms. macOS announces the change before the list shows it, so one read can see the
+    /// old state; the first waits are short so such a read is put right quickly.
+    private static let settlingChecks: [Duration] = [.milliseconds(30), .milliseconds(30), .milliseconds(40),
+                                                     .milliseconds(50), .milliseconds(70), .milliseconds(80),
+                                                     .milliseconds(200), .milliseconds(300), .milliseconds(400),
+                                                     .milliseconds(800)]
+
+    /// Reads now and again at each settling delay, then stops. The next change cancels what is left.
     private func fullScreenMayHaveChanged() {
         refreshFullScreen()
         pendingFullScreenCheck?.cancel()
         pendingFullScreenCheck = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(700))
-            guard !Task.isCancelled else { return }
-            self?.refreshFullScreen()
+            for delay in Self.settlingChecks {
+                try? await Task.sleep(for: delay)
+                guard !Task.isCancelled else { return }
+                self?.refreshFullScreen()
+            }
         }
     }
 
-    /// Shows or hides the panel as the setting, a peek and any full-screen app on this display say.
+    /// Shows or hides the island as the setting, a peek and any full-screen app on this display say. Hiding tucks
+    /// the drawing away and lets clicks through, and leaves the panel ordered in on every Space: ordering it in
+    /// again while a Space is still changing is silently lost, which left the island missing after leaving full
+    /// screen.
     private func refreshFullScreen() {
         let mode = model.preferences.fullScreenMode
         // Nothing to ask the window server when the island shows over full screen anyway.
         isCovered = mode != .always && isFullScreenAppCovering()
         let peeking = model.island.peek != nil
         let allowed = mode.needsFullScreenAuxiliary(peeking: peeking)
-        let changed = panel.allowsFullScreen != allowed
-        panel.allowsFullScreen = allowed
-        guard mode.showsIsland(covered: isCovered, peeking: peeking) else {
-            if panel.isVisible { panel.orderOut(nil) }
-            return
+        if panel.allowsFullScreen != allowed {
+            panel.allowsFullScreen = allowed
+            // A changed collection behavior only counts for a window ordered in afresh.
+            panel.orderOut(nil)
         }
-        // A changed collection behavior only counts for a window ordered in afresh.
-        if changed, panel.isVisible { panel.orderOut(nil) }
+        let shows = mode.showsIsland(covered: isCovered, peeking: peeking)
+        apply(shows: shows)
         panel.orderFrontRegardless()
     }
+
+    /// Shows the island at once, or tucks it away only once the answer has stayed "hide" for `hideDelay`. Nothing public
+    /// says a Space swipe has started, so the island is on screen for the whole animation of entering a full-screen
+    /// Space; holding it a moment and then shrinking it away reads as intended, and a stale reading of the window list
+    /// that says "not covered" in between cancels the hide, so the island never blinks.
+    private func apply(shows: Bool) {
+        if shows {
+            pendingHide?.cancel()
+            pendingHide = nil
+            fade(toShown: true)
+            return
+        }
+        guard isShown, pendingHide == nil else { return }
+        pendingHide = Task { [weak self] in
+            try? await Task.sleep(for: Self.hideDelay)
+            guard !Task.isCancelled, let self else { return }
+            pendingHide = nil
+            fade(toShown: false)
+        }
+    }
+
+    private func fade(toShown shown: Bool) {
+        panel.ignoresMouseEvents = !shown
+        guard shown != isShown else { return }
+        isShown = shown
+        // The view animates its own shrinking and growing; the panel is left alone.
+        model.island.isTucked = !shown
+    }
+
+    /// How long the island stays on screen after a full-screen app is seen, before it shrinks away. The Space
+    /// event comes when the slide into the full-screen Space has ended, so this is a short beat on top of that.
+    private static let hideDelay = Duration.milliseconds(300)
 
     /// Whether another app has a window the size of this display on the Space now showing on it.
     private func isFullScreenAppCovering() -> Bool {
