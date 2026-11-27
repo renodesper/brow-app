@@ -36,6 +36,24 @@ Each feature below is marked on four steps:
 Size: about 3,440 lines of code in 17 files (2,780 in the app, 660 in `BrowCore`), about 410 lines of tests
 (41 test cases).
 
+## 28 Nov 2026: hover opens by default, and dragging changes the screen
+
+- **Hover is the default.** The island opens when the pointer rests on the notch (after the hover delay), and a click
+  still opens it too. A choice saved earlier is kept (only a changed setting is saved, so someone who never touched
+  it now gets hover). Turning "Open when the pointer rests on the notch" off gives the old click-only behavior.
+- **The hello at launch** already followed the setting. With hover on it now reads "Hover over or click the notch to
+  open it."; with hover off, "Click the notch to open it."
+- **Dragging with the mouse moves the screens.** A drag on the open island (when there is more than one screen) feeds
+  the same `SwipeTracker` as a two-finger swipe, so it follows the pointer, resists at the ends, and moves one screen
+  or springs back when released (a flick works too). A SwiftUI drag gesture with a 6 pt minimum sits on the open
+  island: a click that stays under 6 pt reaches the buttons as before, and a drag that goes further takes the
+  gesture from them. While dragging the island does not close when the pointer passes its edge, and the pointer is
+  looked at again when the drag ends. Code: `IslandView.dragToSwipe`, `IslandController.mouseDragged`.
+
+Compiled, 87 tests pass (no new logic in `BrowCore`; the tracker is unchanged). Not checked by hand: hover as the
+default on a fresh install, the hello text, dragging with the mouse and a click on a button inside a card after the
+change, the drag across the island's edge, and a drag on a screen with a single card.
+
 ## 27 Nov 2026: hiding over full-screen apps
 
 Settings → General → "Show over full-screen apps": **Never** (default), **Only for alerts**, **Always**. Written,
