@@ -31,6 +31,8 @@ final class IslandController {
     private var swipe = SwipeTracker()
     /// Whether the swipe in progress has already gone far enough to change screen, so the tap is felt once.
     private var passedCommit = false
+    /// Whether the pointer was over the island itself the last time it was looked at, so only a change acts.
+    private var wasPointerInside = false
 
     init(model: DisplayContext, displayID: String, makeMenu: @escaping () -> NSMenu) {
         self.model = model
@@ -53,7 +55,7 @@ final class IslandController {
             open: { [weak self] in self?.setOpen(true) },
             showScreen: { [weak self] index in self?.showScreen(index) },
             endPeek: { [weak self] in self?.endPeek(after: .zero) }))
-        hover.onHover = { [weak self] isInside in self?.pointerMoved(inside: isInside) }
+        hover.onHover = { [weak self] in self?.pointerChanged() }
 
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
@@ -95,10 +97,26 @@ final class IslandController {
         model.preferences.lastScreen = target
     }
 
+    /// What the pointer counts as "on the island": the island's own rect, not the panel's. The panel is larger
+    /// than the island while it animates, and that clear margin must neither open the island nor hold it open.
+    private var islandFrame: CGRect {
+        let size = model.islandSize
+        let frame = panel.frame
+        return CGRect(x: frame.midX - size.width / 2, y: frame.maxY - size.height, width: size.width, height: size.height)
+    }
+
     private var isPointerInside: Bool {
         // NSMouseInRect counts the top edge as inside: a pointer pushed against the top of the screen sits
         // exactly on it.
-        NSMouseInRect(NSEvent.mouseLocation, panel.frame, false)
+        NSMouseInRect(NSEvent.mouseLocation, islandFrame, false)
+    }
+
+    /// Called for every enter, exit and move over the panel; acts only when the pointer crosses the island's edge.
+    private func pointerChanged() {
+        let inside = isPointerInside
+        guard inside != wasPointerInside else { return }
+        wasPointerInside = inside
+        pointerMoved(inside: inside)
     }
 
     private func endPeek(after delay: Duration) {
@@ -174,14 +192,14 @@ final class IslandController {
     /// another app is active. Each one ignores events for any window but the island's.
     private func installEventMonitors() {
         eventMonitors.append(NSEvent.addLocalMonitorForEvents(matching: .rightMouseDown) { [weak self] event in
-            guard let self, event.window === self.panel else { return event }
+            guard let self, event.window === self.panel, self.isPointerInside else { return event }
             self.showMenu(for: event)
             return nil
         } as Any)
         eventMonitors.append(NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
             guard let self, event.window === self.panel else { return event }
             // A click opens the closed island. Once open, or while it peeks, clicks belong to the buttons.
-            if self.model.mode == .closed { self.setOpen(true) }
+            if self.model.mode == .closed, self.isPointerInside { self.setOpen(true) }
             return event
         } as Any)
         eventMonitors.append(NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
@@ -356,17 +374,19 @@ private final class IslandPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
-/// Reports the pointer entering and leaving, also while another app is active.
+/// Reports the pointer entering, leaving and moving, also while another app is active.
 private final class HoverView: NSView {
-    var onHover: ((Bool) -> Void)?
+    var onHover: (() -> Void)?
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         trackingAreas.forEach(removeTrackingArea)
-        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+        addTrackingArea(NSTrackingArea(rect: .zero,
+                                       options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
                                        owner: self))
     }
 
-    override func mouseEntered(with event: NSEvent) { onHover?(true) }
-    override func mouseExited(with event: NSEvent) { onHover?(false) }
+    override func mouseEntered(with event: NSEvent) { onHover?() }
+    override func mouseExited(with event: NSEvent) { onHover?() }
+    override func mouseMoved(with event: NSEvent) { onHover?() }
 }
