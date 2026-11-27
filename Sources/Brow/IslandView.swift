@@ -6,6 +6,8 @@ struct IslandActions {
     var open: () -> Void
     var showScreen: (Int) -> Void
     var endPeek: () -> Void
+    /// A drag with the mouse or a finger on a trackpad button: where it is from where it started, in points.
+    var drag: (SwipeTracker.Phase, CGSize) -> Void
 }
 
 /// The island: a black shape hanging from the top center of its window. It is the notch while closed, a short
@@ -30,6 +32,12 @@ struct IslandView: View {
         return .asymmetric(insertion: arrive, removal: leave)
     }
 
+    private var dragToSwipe: some Gesture {
+        DragGesture(minimumDistance: 6)
+            .onChanged { actions.drag(.changed, $0.translation) }
+            .onEnded { _ in actions.drag(.ended, .zero) }
+    }
+
     var body: some View {
         let island = model.island
         let mode = model.mode
@@ -46,6 +54,9 @@ struct IslandView: View {
             switch mode {
             case .open:
                 OpenIsland(model: model, actions: actions).transition(contentTransition)
+                    // Dragging with the mouse moves the screens like a swipe. Until the drag has gone a few points,
+                    // buttons get their clicks as usual; after that the drag has them.
+                    .highPriorityGesture(dragToSwipe, including: model.preferences.screens.count > 1 ? .all : .subviews)
             case .peek:
                 if let peek = island.peek {
                     PeekView(peek: peek, model: model, actions: actions).transition(contentTransition)
@@ -360,7 +371,7 @@ private struct PeekView: View {
             .frame(width: 38, height: 38)
             .background(Palette.cyan.opacity(0.22), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         titles("Brow is running",
-               model.preferences.openMode == .hover ? "Rest the pointer on the notch to open it." : "Click the notch to open it.")
+               model.preferences.openMode == .hover ? "Hover over or click the notch to open it." : "Click the notch to open it.")
         Spacer(minLength: 8)
     }
 

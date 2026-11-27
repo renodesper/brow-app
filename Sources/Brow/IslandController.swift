@@ -38,6 +38,8 @@ final class IslandController {
     private var swipe = SwipeTracker()
     /// Whether the swipe in progress has already gone far enough to change screen, so the tap is felt once.
     private var passedCommit = false
+    /// Where the drag with the mouse in progress is from where it started, to turn it into how far it moved each time.
+    private var lastDragTranslation: CGSize?
     /// Whether the pointer was over the island itself the last time it was looked at, so only a change acts.
     private var wasPointerInside = false
 
@@ -50,7 +52,7 @@ final class IslandController {
         let hover = HoverView()
         panel.contentView = hover
         host = NSHostingView(rootView: IslandView(model: model, actions: IslandActions(
-            open: {}, showScreen: { _ in }, endPeek: {})))
+            open: {}, showScreen: { _ in }, endPeek: {}, drag: { _, _ in })))
         // The panel's size is set here, never by SwiftUI's layout.
         host.sizingOptions = []
         // Fixed size, anchored to the top and centered: only the margins give way when the panel resizes.
@@ -61,7 +63,8 @@ final class IslandController {
         host.rootView = IslandView(model: model, actions: IslandActions(
             open: { [weak self] in self?.setOpen(true) },
             showScreen: { [weak self] index in self?.showScreen(index) },
-            endPeek: { [weak self] in self?.endPeek(after: .zero) }))
+            endPeek: { [weak self] in self?.endPeek(after: .zero) },
+            drag: { [weak self] phase, translation in self?.mouseDragged(phase, translation) }))
         hover.onHover = { [weak self] in self?.pointerChanged() }
 
         screenObserver = NotificationCenter.default.addObserver(
@@ -191,7 +194,7 @@ final class IslandController {
             pendingClose?.cancel()
             pendingClose = Task { [weak self] in
                 try? await Task.sleep(for: IslandLayout.closeGrace)
-                guard !Task.isCancelled, let self, !self.isPointerInside else { return }
+                guard !Task.isCancelled, let self, !self.isPointerInside, !self.model.island.isDragging else { return }
                 self.setOpen(false)
             }
         }
@@ -201,6 +204,7 @@ final class IslandController {
         guard model.island.isOpen != open else { return }
         model.island.isDragging = false
         model.island.dragOffset = 0
+        lastDragTranslation = nil
         model.island.isAnticipating = false
         if open {
             pendingPeekEnd?.cancel()
@@ -247,8 +251,7 @@ final class IslandController {
     /// A two-finger swipe on the open island drags the screen with the fingers, then moves one screen left or right
     /// or springs back when they lift.
     private func scrolled(_ event: NSEvent) {
-        guard model.island.isOpen, model.preferences.screens.count > 1,
-              event.momentumPhase.isEmpty else { return }
+        guard event.momentumPhase.isEmpty else { return }
         let phase: SwipeTracker.Phase
         if event.phase.contains(.began) {
             phase = .began
@@ -262,10 +265,30 @@ final class IslandController {
         }
         // With natural scrolling the deltas already follow the fingers; without it they run the other way.
         let sign: Double = event.isDirectionInvertedFromDevice ? 1 : -1
+        swiped(fingersX: sign * Double(event.scrollingDeltaX), fingersY: sign * Double(event.scrollingDeltaY),
+               phase: phase, time: event.timestamp)
+    }
+
+    /// Dragging with the mouse, or a finger on a clicking trackpad, moves the screens the same way. SwiftUI hands
+    /// over where the drag is from where it started; the tracker wants how far it moved since the last event.
+    private func mouseDragged(_ phase: SwipeTracker.Phase, _ translation: CGSize) {
+        let previous = lastDragTranslation
+        lastDragTranslation = phase == .ended ? nil : translation
+        let from = previous ?? .zero
+        let isFirst = previous == nil
+        swiped(fingersX: Double(translation.width - from.width), fingersY: Double(translation.height - from.height),
+               phase: phase == .changed && isFirst ? .began : phase, time: ProcessInfo.processInfo.systemUptime)
+        // Dragging past the island's edge sends no "left" event, so look again where the pointer ended up.
+        if phase == .ended { pointerChanged() }
+    }
+
+    /// Follows a swipe with the screens: they move with the fingers or the pointer, then slide on to the next
+    /// screen or back.
+    private func swiped(fingersX: Double, fingersY: Double, phase: SwipeTracker.Phase, time: Double) {
+        guard model.island.isOpen, model.preferences.screens.count > 1 else { return }
         let index = model.island.screenIndex
-        let outcome = swipe.add(fingersX: sign * Double(event.scrollingDeltaX),
-                                fingersY: sign * Double(event.scrollingDeltaY), phase: phase,
-                                time: event.timestamp, canGoNext: index < model.preferences.screens.count - 1,
+        let outcome = swipe.add(fingersX: fingersX, fingersY: fingersY, phase: phase, time: time,
+                                canGoNext: index < model.preferences.screens.count - 1,
                                 canGoPrevious: index > 0, width: Double(model.islandSize.width))
         switch outcome {
         case .none:
