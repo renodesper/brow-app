@@ -188,7 +188,7 @@ Sources/Brow/              The app
   AppModel.swift           The shared models, and what belongs to one display
   Preferences.swift        How the island opens, which displays, the screens
   KeepAwake.swift, PomodoroModel.swift, UsageModel.swift, CalendarModel.swift
-Support/                   Info.plist and the entitlements (Calendar only)
+Support/                   Info.plist, the entitlements (Calendar only) and the app icon (Support/AppIcon)
 scripts/make-dmg.sh        Wraps the app in a disk image
 .github/workflows/         Build and test on every pull request; Release builds the disk image
 docs/STATUS.md             Features, progress, what is not built, and what to improve
