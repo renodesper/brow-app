@@ -1,6 +1,6 @@
 # Brow: features, progress and what's next
 
-Last updated 27 Nov 2026: version 1.0.0 (v0.2.0 plus the v2 native macOS look, several displays, interactive swipe and the release tooling), compiled and tested. Released as a plain, ad-hoc signed disk image; notarization waits for an Apple Developer account.
+Last updated 28 Nov 2026: version 1.2.0 (1.0.0 was v0.2.0 plus the v2 native macOS look, several displays, interactive swipe and the release tooling; 1.1.0 fixed hover and motion; 1.2.0 hides the island in full screen, opens on hover by default and changes screen with a mouse drag), compiled and tested. Released as a plain, ad-hoc signed disk image; notarization waits for an Apple Developer account.
 
 ## Where the project stands
 
