@@ -36,6 +36,33 @@ Each feature below is marked on four steps:
 Size: about 3,440 lines of code in 17 files (2,780 in the app, 660 in `BrowCore`), about 410 lines of tests
 (41 test cases).
 
+## 27 Nov 2026: hiding over full-screen apps
+
+Settings → General → "Show over full-screen apps": **Never** (default), **Only for alerts**, **Always**. Written,
+compiled, and 17 unit tests cover the decision and the detection (`BrowCore/FullScreenVisibility.swift`); 85 tests
+pass in all.
+
+What was tried first, all with public API and none of it enough: removing `.fullScreenAuxiliary`, replacing
+`.canJoinAllSpaces` with `.moveToActiveSpace` plus `NSWorkspace.activeSpaceDidChangeNotification`, and a different
+window level (`.mainMenu` put the island behind the menu bar). The panel stayed visible over a full-screen app each
+time, so collection behavior alone does not hide it. Those tests were first run on a maximised window and not on a
+real full-screen Space (the green button fills the screen rather than entering full screen on this macOS; use
+Ctrl+Cmd+F), so treat the negative results as unreliable.
+
+What it does now: on a Space change or when another app is activated (and once more 700 ms later, while the
+transition settles), each island asks `CGWindowListCopyWindowInfo` for the on-screen windows and checks whether
+another app has one that fills its display. On a notched display an app in full screen fills the area below the notch
+(Y=44, height 1286 on a 2048 x 1330 display with a 43.5 pt inset), so that shape counts too. Nothing polls. The panel is
+ordered out or in; `.fullScreenAuxiliary` is on only in Always mode, and in Only for alerts while a peek is showing.
+
+Checked by hand (built-in notched display, Never): Safari in full screen (Ctrl+Cmd+F) hides the island.
+Not checked: returning to a desktop Space, several desktop Spaces, full screen on the external display, a Keynote
+slideshow, a maximised or tiled window staying visible, Only for alerts showing a peek over full screen (and whether
+a changed collection behavior needs the order-out and order-in the code does), and Always.
+
+Known limit: on a notched display a maximised window and a full-screen one differ by about 1 pt of position. A window
+manager that fills exactly the area below the menu bar (Rectangle's Maximize, say) may be taken for full screen.
+
 ## 26 Nov 2026: v2, the native macOS look
 
 Brow now looks like a Mac app and follows light and dark mode (the design is kept outside this
@@ -215,7 +242,6 @@ Ordered roughly by how useful each seems.
 | Feature | Notes |
 |---|---|
 | Usage warnings at 80% and 95% | Needs readings while the island is closed, so a file watcher or a socket: the cost is some idle work |
-| Hiding over full-screen apps | The known way uses a private macOS API, which this project avoids so far |
 | Time to leave | Needs location permission and a route lookup over the network |
 | More AI tools | Antigravity reports usage through its `agy` command; others vary |
 | App icon, signing, notarization | The app is ad-hoc signed; see the README on the Calendar permission |
