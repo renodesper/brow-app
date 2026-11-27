@@ -1,6 +1,6 @@
 # Brow: features, progress and what's next
 
-Last updated 28 Nov 2026: version 1.2.0 (1.0.0 was v0.2.0 plus the v2 native macOS look, several displays, interactive swipe and the release tooling; 1.1.0 fixed hover and motion; 1.2.0 hides the island in full screen, opens on hover by default and changes screen with a mouse drag), compiled and tested. Released as a plain, ad-hoc signed disk image; notarization waits for an Apple Developer account.
+Last updated 28 Nov 2026: version 1.3.0 (1.3.0 adds the app icon, `Support/AppIcon`, copied into the bundle by `make bundle`; 1.0.0 was v0.2.0 plus the v2 native macOS look, several displays, interactive swipe and the release tooling; 1.1.0 fixed hover and motion; 1.2.0 hides the island in full screen, opens on hover by default and changes screen with a mouse drag), compiled and tested. Released as a plain, ad-hoc signed disk image; notarization waits for an Apple Developer account.
 
 ## Where the project stands
 
@@ -319,7 +319,7 @@ Ordered roughly by how useful each seems.
 | Usage warnings at 80% and 95% | Needs readings while the island is closed, so a file watcher or a socket: the cost is some idle work |
 | Time to leave | Needs location permission and a route lookup over the network |
 | More AI tools | Antigravity reports usage through its `agy` command; others vary |
-| App icon, signing, notarization | The app is ad-hoc signed; see the README on the Calendar permission |
+| Signing, notarization | The app is ad-hoc signed; see the README on the Calendar permission |
 | Other notch-app staples | Now Playing, volume and brightness HUDs, battery, file shelf: all out of scope so far |
 
 ## Known risks
